@@ -30,7 +30,6 @@
 import uno
 import unohelper
 
-
 from com.sun.star.sdbc import XResultSetMetaData
 
 import traceback

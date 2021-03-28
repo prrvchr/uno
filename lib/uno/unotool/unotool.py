@@ -31,10 +31,9 @@ import uno
 
 from com.sun.star.lang import WrappedTargetRuntimeException
 from com.sun.star.connection import NoConnectException
+
 from com.sun.star.ucb.ConnectionMode import ONLINE
 from com.sun.star.ucb.ConnectionMode import OFFLINE
-
-from .unolib import InteractionHandler
 
 import datetime
 import binascii
@@ -64,6 +63,9 @@ def getPathSettings(ctx):
 
 def getUrlTransformer(ctx):
     return createService(ctx, 'com.sun.star.util.URLTransformer')
+
+def getInteractionHandler(ctx):
+    return createService(ctx, 'com.sun.star.task.InteractionHandler')
 
 def getUrlPresentation(ctx, location, password=False):
     url = uno.createUnoStruct('com.sun.star.util.URL')
@@ -103,12 +105,17 @@ def getExceptionMessage(exception):
     return message
 
 def getFileSequence(ctx, url, default=None):
-    length, sequence = 0, uno.ByteSequence(b'')
+    length = 0
+    sequence = uno.ByteSequence(b'')
     fs = getSimpleFile(ctx)
     if fs.exists(url):
-        length, sequence = _getSequence(fs.openFileRead(url), fs.getSize(url))
+        inputstream = fs.openFileRead(url)
+        size = fs.getSize(url)
+        length, sequence = _getSequence(inputstream, size)
     elif default is not None and fs.exists(default):
-        length, sequence = _getSequence(fs.openFileRead(default), fs.getSize(default))
+        inputstream = fs.openFileRead(default)
+        size = fs.getSize(default)
+        length, sequence = _getSequence(inputstream, size)
     return length, sequence
 
 def _getSequence(inputstream, length):
@@ -176,7 +183,8 @@ def getStringResource(ctx, identifier, path=None, filename='DialogStrings', loca
     location = getResourceLocation(ctx, identifier, path)
     if locale is None:
         locale = getCurrentLocale(ctx)
-    args = (location, True, locale, filename, '', InteractionHandler())
+    handler = getInteractionHandler(ctx)
+    args = (location, True, locale, filename, '', handler)
     return createService(ctx, service, *args)
 
 def generateUuid():
@@ -207,7 +215,7 @@ def getContainerWindow(ctx, parent, handler, library, xdl):
     try:
         window = provider.createContainerWindow(url, '', parent, handler)
     except WrappedTargetRuntimeException as e:
-        print("unotools.getContainerWindow() ERROR: %s - %s" % (e, traceback.print_exc()))
+        print("unotool.getContainerWindow() ERROR: %s - %s" % (e, traceback.print_exc()))
     return window
 
 def getDialogUrl(library, xdl):
@@ -219,9 +227,8 @@ def executeShell(ctx, url, option=''):
 
 def executeDispatch(ctx, url, arguments=(), listener=None):
     url = getUrl(ctx, url)
-    dispatcher = getDesktop(ctx).getCurrentFrame().queryDispatch(url, '', 0)
-    #dispatcher = createService(ctx, 'com.sun.star.frame.DispatchHelper')
-    #dispatcher.executeDispatch(getDesktop(ctx).getCurrentFrame(), url, '', 0, ())
+    desktop = getDesktop(ctx)
+    dispatcher = desktop.getCurrentFrame().queryDispatch(url, '', 0)
     if dispatcher is not None:
         if listener is not None:
             dispatcher.dispatchWithNotification(url, arguments, listener)
@@ -258,7 +265,8 @@ def getPropertyValue(name, value, state=None, handle=-1):
     property.Name = name
     property.Handle = handle
     property.Value = value
-    s = state if state else uno.Enum('com.sun.star.beans.PropertyState', 'DIRECT_VALUE')
+    if state is None:
+        state = uno.Enum('com.sun.star.beans.PropertyState', 'DIRECT_VALUE')
     property.State = s
     return property
 
@@ -281,13 +289,8 @@ def getPropertySetInfoChangeEvent(source, name, reason, handle=-1):
     event.Handle = handle
     event.Reason = reason
 
-def getInteractionHandler(ctx):
-    service = 'com.sun.star.task.InteractionHandler'
-    kwargs = {'Parent': getParentWindow(ctx)}
-    return createService(ctx, service, **kwargs)
-
 def getParentWindow(ctx):
-    desktop = createService(ctx, 'com.sun.star.frame.Desktop')
+    desktop = getDesktop(ctx)
     try:
         parent = desktop.getCurrentFrame().getContainerWindow()
     except:

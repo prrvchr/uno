@@ -32,9 +32,10 @@ import unohelper
 
 from com.sun.star.uno import XWeak
 from com.sun.star.uno import XAdapter
+
 from com.sun.star.awt.grid import XMutableGridDataModel
 
-from smtpserver.dbtools import getValueFromResult
+from dbtools import getValueFromResult
 
 from .gridhandler import GridHandler
 

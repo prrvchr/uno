@@ -27,10 +27,9 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import uno
 import unohelper
 
-from unolib import createService
+from unotool import createService
 
 from collections import OrderedDict
 import traceback

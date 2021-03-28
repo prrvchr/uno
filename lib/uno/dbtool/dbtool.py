@@ -35,24 +35,25 @@ from com.sun.star.sdbc import SQLWarning
 from com.sun.star.logging.LogLevel import INFO
 from com.sun.star.logging.LogLevel import SEVERE
 
-from unolib import KeyMap
-from unolib import createService
-from unolib import getPropertyValue
-from unolib import getPropertyValueSet
-from unolib import getResourceLocation
-from unolib import getSimpleFile
+from ..unolib import KeyMap
 
-from .dbqueries import getSqlQuery
+from ..unotool import createService
+from ..unotool import getPropertyValue
+from ..unotool import getPropertyValueSet
+from ..unotool import getResourceLocation
+from ..unotool import getSimpleFile
 
-from .dbconfig import g_protocol
-from .dbconfig import g_path
-from .dbconfig import g_jar
-from .dbconfig import g_class
-from .dbconfig import g_options
-from .dbconfig import g_shutdown
-from .dbconfig import g_version
+from ..dbqueries import getSqlQuery
 
-from .logger import getMessage
+from ..dbconfig import g_protocol
+from ..dbconfig import g_path
+from ..dbconfig import g_jar
+from ..dbconfig import g_class
+from ..dbconfig import g_options
+from ..dbconfig import g_shutdown
+from ..dbconfig import g_version
+
+from ..logger import getMessage
 g_message = 'dbtools'
 
 import traceback

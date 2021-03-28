@@ -30,8 +30,11 @@
 import uno
 import unohelper
 
+from com.sun.star.uno import XWeak
+
 from com.sun.star.lang import XServiceInfo
 from com.sun.star.lang import XComponent
+
 from com.sun.star.util import XCancellable
 
 from com.sun.star.sdbc import XCloseable
@@ -46,17 +49,16 @@ from com.sun.star.sdbc import XParameters
 from com.sun.star.sdbc import XRow
 from com.sun.star.sdbc import XOutParameters
 from com.sun.star.sdbc import XGeneratedResultSet
+from com.sun.star.sdbc.ResultSetType import SCROLL_INSENSITIVE
 
 from com.sun.star.sdbcx import XColumnsSupplier
 
-from com.sun.star.uno import XWeak
-
 from com.sun.star.beans.PropertyAttribute import BOUND
 from com.sun.star.beans.PropertyAttribute import READONLY
-from com.sun.star.sdbc.ResultSetType import SCROLL_INSENSITIVE
 
-from unolib import PropertySet
-from unolib import getProperty
+from ..unolib import PropertySet
+
+from ..unotool import getProperty
 
 from .resultsetmetadata import ResultSetMetaData
 

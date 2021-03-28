@@ -32,20 +32,25 @@ import unohelper
 
 from com.sun.star.lang import XServiceInfo
 from com.sun.star.lang import XComponent
-from com.sun.star.sdb import XCompletedConnection
+
 from com.sun.star.sdbc import XIsolatedConnection
-from com.sun.star.util import XFlushable
-from com.sun.star.sdb import XQueryDefinitionsSupplier
 from com.sun.star.sdbc import XDataSource
+
+from com.sun.star.util import XFlushable
+
+from com.sun.star.sdb import XCompletedConnection
+from com.sun.star.sdb import XQueryDefinitionsSupplier
 from com.sun.star.sdb import XBookmarksSupplier
 from com.sun.star.sdb import XDocumentDataSource
+
 from com.sun.star.uno import XWeak
 
 from com.sun.star.beans.PropertyAttribute import BOUND
 from com.sun.star.beans.PropertyAttribute import READONLY
 
-from unolib import PropertySet
-from unolib import getProperty
+from ..unolib import PropertySet
+
+from ..unotool import getProperty
 
 import traceback
 

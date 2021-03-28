@@ -36,14 +36,6 @@ from com.sun.star.beans import XPropertiesChangeNotifier
 from com.sun.star.beans import XPropertySetInfoChangeNotifier
 from com.sun.star.beans import UnknownPropertyException
 from com.sun.star.lang import XInitialization
-from com.sun.star.task import XInteractionHandler
-
-
-class InteractionHandler(unohelper.Base,
-                         XInteractionHandler):
-    # XInteractionHandler
-    def handle(self, requester):
-        pass
 
 
 class PropertySetInfo(unohelper.Base,

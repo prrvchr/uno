@@ -36,7 +36,7 @@ from com.sun.star.ui.dialogs.WizardTravelType import FINISH
 
 from com.sun.star.ui.dialogs.ExecutableDialogResults import OK
 
-from unolib import createService
+from ..unotool import createService
 
 from .wizardmodel import WizardModel
 from .wizardview import WizardView

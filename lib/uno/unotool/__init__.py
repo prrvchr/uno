@@ -27,27 +27,39 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import uno
-import unohelper
-
-from com.sun.star.beans import XPropertyContainer
-
-from ..unotools import getProperty
-
-
-class PropertyContainer(unohelper.Base,
-                        XPropertyContainer):
-    def __init__(self):
-        self._propertySetInfo = {}
-
-    # XPropertyContainer
-    def addProperty(self, name, attributes, default):
-        print("PropertyContainer.addProperty() *********************************************")
-        property = getProperty(name, default.type, attributes)
-        self._propertySetInfo.update({name: property})
-        setattr(self, name, default.value)
-    def removeProperty(self, name):
-        print("PropertyContainer.removeProperty() ******************************************")
-        self._propertySetInfo.pop(name, None)
-        if hasattr(self, name):
-            delattr(self, name)
+from .unotool import createMessageBox
+from .unotool import createService
+from .unotool import getContainerWindow
+from .unotool import getProperty
+from .unotool import getPropertyValue
+from .unotool import getPropertyValueSet
+from .unotool import getResourceLocation
+from .unotool import getCurrentLocale
+from .unotool import getFileSequence
+from .unotool import getConfiguration
+from .unotool import getSimpleFile
+from .unotool import getStringResource
+from .unotool import generateUuid
+from .unotool import getNamedValue
+from .unotool import getNamedValueSet
+from .unotool import getDesktop
+from .unotool import getSimpleFile
+from .unotool import getUrlTransformer
+from .unotool import getPathSettings
+from .unotool import getInteractionHandler
+from .unotool import getDialog
+from .unotool import getDialogUrl
+from .unotool import getDateTime
+from .unotool import getInterfaceTypes
+from .unotool import hasInterface
+from .unotool import executeShell
+from .unotool import executeDispatch
+from .unotool import parseDateTime
+from .unotool import unparseDateTime
+from .unotool import unparseTimeStamp
+from .unotool import getConnectionMode
+from .unotool import getParentWindow
+from .unotool import getUrl
+from .unotool import getUrlPresentation
+from .unotool import parseUrl
+from .unotool import getExceptionMessage

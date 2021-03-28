@@ -32,19 +32,24 @@ import unohelper
 
 from com.sun.star.lang import XServiceInfo
 from com.sun.star.lang import XComponent
+from com.sun.star.lang import XMultiServiceFactory
+
 from com.sun.star.sdbc import XConnection
 from com.sun.star.sdbc import XCloseable
 from com.sun.star.sdbc import XWarningsSupplier
+
 from com.sun.star.sdb import XCommandPreparation
 from com.sun.star.sdb import XQueriesSupplier
 from com.sun.star.sdb import XSQLQueryComposerFactory
-from com.sun.star.lang import XMultiServiceFactory
-from com.sun.star.container import XChild
+
 from com.sun.star.sdb.application import XTableUIProvider
+
 from com.sun.star.sdb.tools import XConnectionTools
+
 from com.sun.star.sdb.CommandType import TABLE
 from com.sun.star.sdb.CommandType import QUERY
 from com.sun.star.sdb.CommandType import COMMAND
+
 from com.sun.star.beans.PropertyAttribute import READONLY
 
 from com.sun.star.sdbc import SQLException
@@ -56,23 +61,28 @@ from com.sun.star.sdbcx import XTablesSupplier
 from com.sun.star.sdbcx import XViewsSupplier
 from com.sun.star.sdbcx import XUsersSupplier
 from com.sun.star.sdbcx import XGroupsSupplier
-
 from com.sun.star.sdbcx import XUser
+
+from com.sun.star.container import XChild
 from com.sun.star.container import XNameAccess
 from com.sun.star.container import XIndexAccess
 from com.sun.star.container import XEnumerationAccess
 from com.sun.star.container import XElementAccess
 
-from unolib import PropertySet
-from unolib import getProperty
-from unolib import createService
+from ..unolib import PropertySet
 
-from .dbtools import getSequenceFromResult
-from .dbtools import getKeyMapSequenceFromResult
-from .dbqueries import getSqlQuery
+from ..unotool import getProperty
+from ..unotool import createService
+
+from ..dbtool import getSequenceFromResult
+from ..dbtool import getKeyMapSequenceFromResult
+
+from ..dbqueries import getSqlQuery
 
 from .documentdatasource import DocumentDataSource
+
 from .databasemetadata import DatabaseMetaData
+
 from .statement import Statement
 from .statement import PreparedStatement
 from .statement import CallableStatement

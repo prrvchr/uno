@@ -31,13 +31,15 @@ import uno
 import unohelper
 
 from com.sun.star.ui.dialogs import XWizard
-from com.sun.star.lang import XInitialization
 
+from com.sun.star.lang import XInitialization
 from com.sun.star.lang import IllegalArgumentException
+
 from com.sun.star.util import InvalidStateException
+
 from com.sun.star.container import NoSuchElementException
 
-from unolib import hasInterface
+from ..unotool import hasInterface
 
 from .wizardmanager import WizardManager
 
