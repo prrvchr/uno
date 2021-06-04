@@ -58,6 +58,11 @@ g_message = 'dbtools'
 import traceback
 
 
+def getDataSourceConnection(ctx, url, name='', password=''):
+    datasource = createDataSource(ctx, url)
+    connection = datasource.getIsolatedConnection(name, password)
+    return connection
+
 def createDataSource(ctx, url, path=None):
     service = 'com.sun.star.sdb.DatabaseContext'
     dbcontext = createService(ctx, service)
@@ -118,7 +123,7 @@ def getDataSourceLocation1(location, dbname, shutdown):
         url += g_shutdown
     return url
 
-def getDataSourceConnection(ctx, url, dbname, name='', password=''):
+def getDataSourceConnection1(ctx, url, dbname, name='', password=''):
     dbcontext = createService(ctx, 'com.sun.star.sdb.DatabaseContext')
     odb = dbname if dbcontext.hasByName(dbname) else '%s/%s.odb' % (url, dbname)
     datasource = dbcontext.getByName(odb)
