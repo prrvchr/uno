@@ -73,7 +73,6 @@ class LogHandler(unohelper.Base,
         pass
 
     def publish(self, record):
-        # TODO: Need to do a callback with the record
         self._callback()
         return True
 
