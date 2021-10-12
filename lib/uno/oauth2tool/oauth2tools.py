@@ -27,62 +27,19 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import unohelper
+from ..unotool import createService
 
-from com.sun.star.awt import XDialogEventHandler
-from com.sun.star.awt import XItemListener
-
-import traceback
+from .oauth2config import g_oauth2
 
 
-class DialogHandler(unohelper.Base,
-                    XDialogEventHandler):
-    def __init__(self, manager):
-        self._manager = manager
+def getRequest(ctx, scheme, name):
+    request = createService(ctx, g_oauth2)
+    if request is not None:
+        request.initializeSession(scheme, name)
+    return request
 
-# XDialogEventHandler
-    def callHandlerMethod(self, dialog, event, method):
-        try:
-            handled = False
-            if method == 'Help':
-                handled = True
-            elif method == 'Previous':
-                self._manager.travelPrevious()
-                handled = True
-            elif method == 'Next':
-                self._manager.travelNext()
-                handled = True
-            elif method == 'Finish':
-                self._manager.doFinish()
-                handled = True
-            elif method == 'Cancel':
-                self._manager.doCancel()
-                handled = True
-            return handled
-        except Exception as e:
-            msg = "Error: %s" % traceback.print_exc()
-            print(msg)
-
-    def getSupportedMethodNames(self):
-        return ('Help',
-                'Previous',
-                'Next',
-                'Finish',
-                'Cancel')
-
-
-class ItemHandler(unohelper.Base,
-                  XItemListener):
-    def __init__(self, manager):
-        self._manager = manager
-
-# XItemListener
-    def itemStateChanged(self, event):
-        try:
-            self._manager.changeRoadmapStep(event.ItemId)
-        except Exception as e:
-            msg = "Error: %s" % traceback.print_exc()
-            print(msg)
-
-    def disposing(self, event):
-        pass
+def getOAuth2(ctx, url, name):
+    oauth2 = createService(ctx, g_oauth2)
+    if oauth2 is not None:
+        oauth2.initializeSession(url, name)
+    return oauth2
