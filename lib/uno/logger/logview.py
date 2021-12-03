@@ -29,18 +29,13 @@
 
 import unohelper
 
-from com.sun.star.ui.dialogs.ExecutableDialogResults import OK
-
 from ..unotool import getContainerWindow
 from ..unotool import getDialog
 
-from .loghandler import WindowHandler
-
 
 class LogWindow(unohelper.Base):
-    def __init__(self, ctx, handler, parent, extension, settings):
+    def __init__(self, ctx, handler, parent, extension):
         self._window = getContainerWindow(ctx, parent, handler, extension, 'LogWindow')
-        self.setLoggerSetting(*settings)
         self._window.setVisible(True)
 
 # LogWindow getter methods
@@ -54,6 +49,11 @@ class LogWindow(unohelper.Base):
         return enabled, level, handler
 
 # LogWindow setter methods
+    def initLogger(self, loggers):
+        control = self._getLoggers()
+        control.Model.StringItemList = loggers
+        control.selectItemPos(0, True)
+
     def setLoggerSetting(self, enabled, level, handler):
         self._getHandler(handler).State = 1
         self._getLevel().selectItemPos(level, True)
@@ -63,6 +63,7 @@ class LogWindow(unohelper.Base):
         self._getLogger().State = int(enabled)
         self._getLevelLabel().Model.Enabled = enabled
         self._getLevel().Model.Enabled = enabled
+        self._getOutputLabel().Model.Enabled = enabled
         self._getConsoleHandler().Model.Enabled = enabled
         control = self._getFileHandler()
         control.Model.Enabled = enabled
@@ -72,14 +73,14 @@ class LogWindow(unohelper.Base):
         self._getViewer().Model.Enabled = enabled
 
 # LogWindow private control methods
+    def _getLoggers(self):
+        return self._window.getControl('ListBox1')
+
     def _getLogger(self):
         return self._window.getControl('CheckBox1')
 
-    def _getLevelLabel(self):
-        return self._window.getControl('Label1')
-
-    def _getLevel(self):
-        return self._window.getControl('ListBox1')
+    def _getOutputLabel(self):
+        return self._window.getControl('Label2')
 
     def _getHandler(self, index):
         return self._window.getControl('OptionButton%s' % index)
@@ -92,6 +93,12 @@ class LogWindow(unohelper.Base):
 
     def _getViewer(self):
         return self._window.getControl('CommandButton1')
+
+    def _getLevelLabel(self):
+        return self._window.getControl('Label3')
+
+    def _getLevel(self):
+        return self._window.getControl('ListBox2')
 
 
 class LogDialog(unohelper.Base):

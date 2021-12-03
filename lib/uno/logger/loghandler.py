@@ -44,7 +44,11 @@ class WindowHandler(unohelper.Base,
     def callHandlerMethod(self, dialog, event, method):
         try:
             handled = False
-            if method == 'ToggleLogger':
+            if method == 'ChangeLogger':
+                logger = event.Source.getSelectedItem()
+                self._manager.changeLogger(logger)
+                handled = True
+            elif method == 'ToggleLogger':
                 enabled = event.Source.State == 1
                 self._manager.toggleLogger(enabled)
                 handled = True
@@ -63,7 +67,8 @@ class WindowHandler(unohelper.Base,
             print(msg)
 
     def getSupportedMethodNames(self):
-        return ('ToggleLogger',
+        return ('ChangeLogger',
+                'ToggleLogger',
                 'EnableViewer',
                 'DisableViewer',
                 'ViewLog')

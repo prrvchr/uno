@@ -45,15 +45,16 @@ import traceback
 
 
 class LogManager(unohelper.Base):
-    def __init__(self, ctx, parent, extension, infos):
+    def __init__(self, ctx, parent, extension, loggers, infos):
         self._ctx = ctx
         self._extention = extension
+        self._logger = 'Logger'
         self._infos = infos
-        self._model = Pool(ctx).getLogger('Logger')
-        handler = WindowHandler(self)
-        settings = self._model.getLoggerSetting()
-        self._view = LogWindow(ctx, handler, parent, extension, settings)
+        self._model = None
         self._dialog = None
+        handler = WindowHandler(self)
+        self._view = LogWindow(ctx, handler, parent, extension)
+        self._view.initLogger(loggers)
 
 # LogManager setter methods
     def setLoggerSetting(self):
@@ -63,6 +64,10 @@ class LogManager(unohelper.Base):
     def saveLoggerSetting(self):
         settings = self._view.getLoggerSetting()
         self._model.setLoggerSetting(*settings)
+
+    def changeLogger(self, logger):
+        self._model = Pool(self._ctx).getLogger(logger)
+        self.setLoggerSetting()
 
     def toggleLogger(self, enabled):
         self._view.toggleLogger(enabled)
@@ -84,15 +89,14 @@ class LogManager(unohelper.Base):
         self._dialog = None
 
     def clearLog(self):
-        try:
-            self._model.clearLogger("ClearingLog ... Done")
-        except Exception as e:
-            msg = "Error: %s - %s" % (e, traceback.print_exc())
-            self._model.logMessage(SEVERE, msg, "LogManager", "clearLog()")
+        msg = Pool(self._ctx).getLogger(self._logger).getMessage(101)
+        self._model.clearLogger(msg, "LogManager", "clearLog()")
 
     def logInfo(self):
+        logger = Pool(self._ctx).getLogger(self._logger)
         for code, info in self._infos.items():
-            self._model.logResource(INFO, code, info, "LogManager", "logInfo()")
+            msg = logger.getMessage(code, info)
+            self._model.logMessage(INFO, msg, "LogManager", "logInfo()")
 
     def refreshLog(self):
         text = self._model.getLoggerText()
