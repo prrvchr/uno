@@ -35,7 +35,7 @@
  *
  *
  ************************************************************************/
-package io.github.prrvchr.ooo;
+package io.github.prrvchr.uno;
 
 import java.io.IOException;
 import java.io.InputStream;
