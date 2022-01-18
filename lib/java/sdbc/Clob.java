@@ -1,7 +1,4 @@
-#!
-# -*- coding: utf-8 -*-
-
-"""
+/*
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
 ║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
@@ -25,18 +22,107 @@
 ║   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                    ║
 ║                                                                                    ║
 ╚════════════════════════════════════════════════════════════════════════════════════╝
-"""
+*/
+package io.github.prrvchr.uno.sdbc;
 
-# DataSource configuration
-g_protocol = 'sdbc:hsqldb:'
-g_folder = 'hsqldb'
-g_jar = 'hsqldb.jar'
-g_class = 'org.hsqldb.jdbcDriver'
-g_options = ';default_schema=true;hsqldb.default_table_type=cached;get_column_name=false;ifexists=false;shutdown=true'
-g_csv = '%s.csv;fs=|;ignore_first=true;encoding=UTF-8;quoted=true'
-g_version = '2.5.1'
-g_role = 'FrontOffice'
-g_dba = 'AD'
-g_superuser = ('https://', 'localhost', '/', 'admin')
-g_schema = '%i'
-g_user = '%i'
+import java.io.InputStream;
+import java.nio.charset.Charset;
+
+import com.sun.star.io.XInputStream;
+import com.sun.star.lib.uno.adapter.InputStreamToXInputStreamAdapter;
+import com.sun.star.lib.uno.helper.WeakBase;
+import com.sun.star.sdbc.SQLException;
+import com.sun.star.sdbc.XClob;
+
+import io.github.prrvchr.uno.helper.UnoHelper;
+
+import org.apache.commons.io.input.ReaderInputStream;
+
+
+public class Clob
+extends WeakBase
+implements XClob
+{
+	private java.sql.Statement m_Statement;
+	private java.sql.Clob m_Clob;
+
+	
+	// The constructor method:
+	public Clob(java.sql.Statement statement,
+            java.sql.Clob clob)
+{
+		m_Statement = statement;
+	m_Clob = clob;
+}
+
+	
+	// com.sun.star.sdbc.XClob:
+	@Override
+	public XInputStream getCharacterStream() throws SQLException {
+		try
+		{
+			java.io.Reader reader = m_Clob.getCharacterStream();
+			Charset cs = Charset.forName("UTF-8");
+			InputStream input = new ReaderInputStream(reader, cs);
+			return new InputStreamToXInputStreamAdapter(input);
+		}
+		catch (java.sql.SQLException e)
+		{
+			throw new SQLException(e.getMessage());
+		}
+	}
+
+	@Override
+	public String getSubString(long position, int lenght) throws SQLException {
+		try
+		{
+			return m_Clob.getSubString(position, lenght);
+		}
+		catch (java.sql.SQLException e)
+		{
+			throw new SQLException(e.getMessage());
+		}
+	}
+
+	@Override
+	public long length() throws SQLException {
+		try
+		{
+			return m_Clob.length();
+		}
+		catch (java.sql.SQLException e)
+		{
+			throw new SQLException(e.getMessage());
+		}
+	}
+
+	@Override
+	public long position(String str, int start) throws SQLException {
+		try
+		{
+			return m_Clob.position(str, start);
+		}
+		catch (java.sql.SQLException e)
+		{
+			throw new SQLException(e.getMessage());
+		}
+	}
+
+	@Override
+	public long positionOfClob(XClob clob, long start) throws SQLException {
+		try
+		{
+			java.sql.Clob c = UnoHelper.getSQLClob(m_Statement, clob);
+			return m_Clob.position(c, start);
+		}
+		catch (java.sql.SQLException e)
+		{
+			throw new SQLException(e.getMessage());
+		}
+	}
+
+
+
+
+
+}

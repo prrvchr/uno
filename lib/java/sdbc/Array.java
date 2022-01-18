@@ -1,7 +1,4 @@
-#!
-# -*- coding: utf-8 -*-
-
-"""
+/*
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
 ║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
@@ -25,18 +22,82 @@
 ║   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                    ║
 ║                                                                                    ║
 ╚════════════════════════════════════════════════════════════════════════════════════╝
-"""
+*/
+package io.github.prrvchr.uno.sdbc;
 
-# DataSource configuration
-g_protocol = 'sdbc:hsqldb:'
-g_folder = 'hsqldb'
-g_jar = 'hsqldb.jar'
-g_class = 'org.hsqldb.jdbcDriver'
-g_options = ';default_schema=true;hsqldb.default_table_type=cached;get_column_name=false;ifexists=false;shutdown=true'
-g_csv = '%s.csv;fs=|;ignore_first=true;encoding=UTF-8;quoted=true'
-g_version = '2.5.1'
-g_role = 'FrontOffice'
-g_dba = 'AD'
-g_superuser = ('https://', 'localhost', '/', 'admin')
-g_schema = '%i'
-g_user = '%i'
+import java.sql.JDBCType;
+import java.util.Arrays;
+
+import com.sun.star.container.XNameAccess;
+import com.sun.star.lib.uno.helper.WeakBase;
+import com.sun.star.sdbc.SQLException;
+import com.sun.star.sdbc.XArray;
+import com.sun.star.sdbc.XResultSet;
+
+public class Array
+extends WeakBase
+implements XArray
+{
+	private final Object[] m_Array;
+	private final JDBCType m_Type;
+
+	// The constructor method:
+	public Array(java.sql.Array array)
+	throws java.sql.SQLException
+	{
+		m_Array = (Object[]) array.getArray();
+		m_Type = JDBCType.valueOf(array.getBaseType());
+	}
+	public Array(Object[] array,
+				 int type)
+	{
+		m_Array = array;
+		m_Type = JDBCType.valueOf(type);
+	}
+
+	@Override
+	public Object[] getArray(XNameAccess arg0)
+	throws SQLException
+	{
+		return m_Array;
+	}
+
+	@Override
+	public Object[] getArrayAtIndex(int index, int count, XNameAccess map)
+	throws SQLException
+	{
+		return Arrays.copyOfRange(m_Array, index, index + count);
+	}
+
+	@Override
+	public int getBaseType()
+	throws SQLException
+	{
+		return m_Type.getVendorTypeNumber();
+	}
+
+	@Override
+	public String getBaseTypeName()
+	throws SQLException
+	{
+		return m_Type.getName();
+	}
+
+	@Override
+	public XResultSet getResultSet(XNameAccess arg0)
+	throws SQLException
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public XResultSet getResultSetAtIndex(int arg0, int arg1, XNameAccess arg2)
+	throws SQLException
+	{
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+}
