@@ -409,8 +409,9 @@ def getSequenceFromResult(result, index=1, default=None, transformer=None):
     sequence = []
     print("dbtools.getSequenceFromResult() 1")
     while result.next():
+        print("dbtools.getSequenceFromResult() 2")
         value = getValueFromResult(result, index)
-        print("dbtools.getSequenceFromResult() 2 %s" % value)
+        print("dbtools.getSequenceFromResult() 3 %s" % value)
 #        if value is None:
 #            continue
         if result.wasNull():
@@ -419,6 +420,7 @@ def getSequenceFromResult(result, index=1, default=None, transformer=None):
             name = result.MetaData.getColumnName(index)
             value = transformer.transform(name, value)
         sequence.append(value)
+    print("dbtools.getSequenceFromResult() 4")
     return tuple(sequence)
 
 def getDictFromResult(result):
