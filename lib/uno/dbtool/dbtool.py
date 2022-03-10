@@ -465,7 +465,6 @@ def getRowValue(row, dbtype, index=1, default=None):
     return value
 
 def createStaticTable(ctx, statement, tables, readonly=False):
-    print("dbtools.createStaticTable() %s" % (tables,))
     for table in tables:
         query = getSqlQuery(ctx, 'createTable' + table)
         statement.executeUpdate(query)
