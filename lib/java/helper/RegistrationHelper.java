@@ -23,7 +23,7 @@
 ║                                                                                    ║
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 */
-package io.github.prrvchr.uno;
+package io.github.prrvchr.jdbcdriver.helper;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -58,22 +58,22 @@ public class RegistrationHelper
     * @return the factory which can create the implementation.
     */
 
-    public static XSingleComponentFactory __getComponentFactory(InputStream in, String sImplementationName)
+    public static XSingleComponentFactory __getComponentFactory(InputStream in, String name)
     {
-        XSingleComponentFactory xFactory = null;
+        XSingleComponentFactory factory = null;
         Class<?>[] classes = findServicesImplementationClasses(in);
         int i = 0;
-        while (i < classes.length && xFactory == null)
+        while (i < classes.length && factory == null)
         {
             Class<?> clazz = classes[i];
-            if (sImplementationName.equals(clazz.getCanonicalName()))
+            if (name.equals(clazz.getCanonicalName()))
             {
                 try
                 {
-                    Class<?>[] getTypes = new Class[]{String.class};
-                    Method getFactoryMethod = clazz.getMethod("__getComponentFactory", getTypes);
-                    Object o = getFactoryMethod.invoke(null, sImplementationName);
-                    xFactory = (XSingleComponentFactory)o;
+                    Class<?>[] types = new Class[]{String.class};
+                    Method method = clazz.getMethod("__getComponentFactory", types);
+                    Object object = method.invoke(null, name);
+                    factory = (XSingleComponentFactory)object;
                 }
                 catch (Exception e)
                 {
@@ -84,7 +84,7 @@ public class RegistrationHelper
             }
             i++;
         }
-        return xFactory;
+        return factory;
     }
 
     /**
@@ -100,7 +100,7 @@ public class RegistrationHelper
     * to the registry key, <code>false</code> otherwise.
     */
 
-    public static boolean __writeRegistryServiceInfo(InputStream in, XRegistryKey xRegistryKey)
+    public static boolean __writeRegistryServiceInfo(InputStream in, XRegistryKey key)
     {
         Class<?>[] classes = findServicesImplementationClasses(in);
         boolean success = true;
@@ -110,10 +110,10 @@ public class RegistrationHelper
             Class<?> clazz = classes[i];
             try
             {
-                Class<?>[] writeTypes = new Class[]{XRegistryKey.class};
-                Method getFactoryMethod = clazz.getMethod("__writeRegistryServiceInfo", writeTypes);
-                Object o = getFactoryMethod.invoke(null, xRegistryKey);
-                success = success && ((Boolean)o).booleanValue();
+                Class<?>[] types = new Class[]{XRegistryKey.class};
+                Method method = clazz.getMethod("__writeRegistryServiceInfo", types);
+                Object object = method.invoke(null, key);
+                success = success && ((Boolean)object).booleanValue();
             } catch (Exception e)
             {
                 success = false;
@@ -143,11 +143,11 @@ public class RegistrationHelper
                     try
                     {
                         Class<?> clazz = Class.forName(line);
-                        Class<?>[] writeTypes = new Class[]{XRegistryKey.class};
-                        Class<?>[] getTypes = new Class[]{String.class};
-                        Method writeRegMethod = clazz.getMethod("__writeRegistryServiceInfo", writeTypes);
-                        Method getFactoryMethod = clazz.getMethod("__getComponentFactory", getTypes);
-                        if (writeRegMethod != null && getFactoryMethod != null)
+                        Class<?>[] rtypes = new Class[]{XRegistryKey.class};
+                        Class<?>[] ftypes = new Class[]{String.class};
+                        Method registry = clazz.getMethod("__writeRegistryServiceInfo", rtypes);
+                        Method factory = clazz.getMethod("__getComponentFactory", ftypes);
+                        if (registry != null && factory != null)
                         {
                             classes.add(clazz);
                         }
