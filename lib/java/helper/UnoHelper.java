@@ -1,6 +1,7 @@
 package io.github.prrvchr.uno.helper;
 
-import java.lang.Exception;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.IllegalAccessException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -13,16 +14,27 @@ import java.util.Map;
 
 import com.sun.star.beans.Property;
 import com.sun.star.beans.NamedValue;
+import com.sun.star.beans.PropertyAttribute;
 import com.sun.star.beans.PropertyValue;
+import com.sun.star.beans.XPropertySet;
+import com.sun.star.beans.XPropertySetInfo;
+import com.sun.star.container.NoSuchElementException;
+import com.sun.star.container.XHierarchicalNameAccess;
 import com.sun.star.deployment.XPackageInformationProvider;
+import com.sun.star.i18n.XLocaleData;
 import com.sun.star.lang.IllegalArgumentException;
+import com.sun.star.lang.Locale;
+import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.XComponent;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XMultiServiceFactory;
-import com.sun.star.sdbc.DriverPropertyInfo;
+import com.sun.star.lang.XServiceInfo;
+import com.sun.star.logging.LogLevel;
+import com.sun.star.resource.XStringResourceResolver;
 import com.sun.star.sdbc.SQLException;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.AnyConverter;
+import com.sun.star.uno.Exception;
 import com.sun.star.uno.Type;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
@@ -31,9 +43,69 @@ import com.sun.star.util.Date;
 import com.sun.star.util.DateTime;
 import com.sun.star.util.Time;
 
+import io.github.prrvchr.uno.sdbc.ResourceBasedEventLogger;
+import io.github.prrvchr.uno.sdbcx.ColumnMain;
+
 
 public class UnoHelper
 {
+
+    public static void ensure(boolean condition, String message) {
+        if (!condition) {
+            throw new com.sun.star.uno.RuntimeException(message);
+        }
+    }
+    
+    public static void ensure(Object reference, String message) {
+        if (reference == null) {
+            throw new com.sun.star.uno.RuntimeException(message);
+        }
+    }
+
+    public static void disposeComponent(final Object object) {
+        final XComponent component = UnoRuntime.queryInterface(XComponent.class, object);
+        if (component != null) {
+            component.dispose();
+        }
+    }
+
+    public static void copyProperties(final XPropertySet src,
+                                      final ColumnMain dst)
+    {
+        copyProperties(src, dst);
+    }
+    public static void copyProperties(final XPropertySet src,
+                                      final XPropertySet dst)
+    {
+        if (src == null || dst == null) {
+            return;
+        }
+        
+        XPropertySetInfo srcPropertySetInfo = src.getPropertySetInfo();
+        XPropertySetInfo dstPropertySetInfo = dst.getPropertySetInfo();
+        
+        for (Property srcProperty : srcPropertySetInfo.getProperties()) {
+            if (dstPropertySetInfo.hasPropertyByName(srcProperty.Name)) {
+                try {
+                    Property dstProperty = dstPropertySetInfo.getPropertyByName(srcProperty.Name);
+                    if ((dstProperty.Attributes & PropertyAttribute.READONLY) == 0) {
+                        Object value = src.getPropertyValue(srcProperty.Name);
+                        if ((dstProperty.Attributes & PropertyAttribute.MAYBEVOID) == 0 || value != null) {
+                            dst.setPropertyValue(srcProperty.Name, value);
+                        }
+                    }
+                }
+                catch (Exception e) {
+                    String error = "Could not copy property '" + srcProperty.Name + "' to the destination set";
+                    XServiceInfo serviceInfo = UnoRuntime.queryInterface(XServiceInfo.class, dst);
+                    if (serviceInfo != null) {
+                        error += " (a '" + serviceInfo.getImplementationName() + "' implementation)";
+                    }
+                    System.out.println("UnoHelper.copyProperties() ERROR: " + error);
+                }
+            }
+        }
+    }
 
     public static void disposeComponent(final XComponent component)
     {
@@ -43,18 +115,33 @@ public class UnoHelper
     }
 
     public static Object createService(XComponentContext context,
-                                       String identifier)
+                                       String name)
     {
         Object service = null;
-        try
-        {
+        try {
             XMultiComponentFactory manager = context.getServiceManager();
-            service = manager.createInstanceWithContext(identifier, context);
+            service = manager.createInstanceWithContext(name, context);
         }
-        catch (Exception e) { e.printStackTrace(); }
+        catch (java.lang.Exception e) {
+            e.printStackTrace();
+        }
         return service;
     }
 
+    public static Object createService(XComponentContext context,
+                                       String name,
+                                       Object... arguments)
+    {
+        Object service = null;
+        try {
+            XMultiComponentFactory manager = context.getServiceManager();
+            service = manager.createInstanceWithArgumentsAndContext(name, arguments, context);
+        }
+        catch (java.lang.Exception e) {
+            e.printStackTrace();
+        }
+        return service;
+    }
 
     public static XMultiServiceFactory getMultiServiceFactory(XComponentContext context,
                                                               String service)
@@ -62,37 +149,37 @@ public class UnoHelper
         return (XMultiServiceFactory) UnoRuntime.queryInterface(XMultiServiceFactory.class, createService(context, service));
     }
 
-    public static Object getConfiguration(final XComponentContext context,
-                                          final String path)
-        throws com.sun.star.uno.Exception
+    public static XHierarchicalNameAccess getConfiguration(final XComponentContext context,
+                                                           final String path)
+        throws Exception
     {
         return getConfiguration(context, path, false, null);
     }
 
-    public static Object getConfiguration(final XComponentContext context,
-                                          final String path,
-                                          final boolean update)
-        throws com.sun.star.uno.Exception
+    public static XHierarchicalNameAccess getConfiguration(final XComponentContext context,
+                                                           final String path,
+                                                           final boolean update)
+        throws Exception
     {
         return getConfiguration(context, path, update, null);
     }
 
-    public static Object getConfiguration(final XComponentContext context,
-                                          final String path,
-                                          final boolean update,
-                                          final String language)
-        throws com.sun.star.uno.Exception
+    public static XHierarchicalNameAccess getConfiguration(final XComponentContext context,
+                                                           final String path,
+                                                           final boolean update,
+                                                           final String language)
+        throws Exception
     {
-        final String service = "com.sun.star.configuration.Configuration";
+        String service = "com.sun.star.configuration.Configuration";
         final XMultiServiceFactory provider = getMultiServiceFactory(context, service + "Provider");
         ArrayList<NamedValue> arguments = new ArrayList<>(Arrays.asList(new NamedValue("nodepath", path)));
         if (language != null) {
             arguments.add(new NamedValue("Locale", language));
         }
-        return provider.createInstanceWithArguments(service + (update ? "UpdateAccess" : "Access"), arguments.toArray());
+        service += update ? "UpdateAccess" : "Access";
+        Object config = provider.createInstanceWithArguments(service, arguments.toArray());
+        return (XHierarchicalNameAccess) UnoRuntime.queryInterface(XHierarchicalNameAccess.class, config);
     }
-
-
 
     public static String getPackageLocation(XComponentContext context, String identifier, String path)
     {
@@ -100,32 +187,83 @@ public class UnoHelper
         return location + "/" + path + "/";
     }
 
-
     public static String getPackageLocation(XComponentContext context, String identifier)
     {
         String location = "";
-        XPackageInformationProvider xProvider = null;
-        try
-        {
-            Object oProvider = context.getValueByName("/singletons/com.sun.star.deployment.PackageInformationProvider");
-            xProvider = (XPackageInformationProvider) UnoRuntime.queryInterface(XPackageInformationProvider.class, oProvider);
+        XPackageInformationProvider provider = null;
+        String service = "/singletons/com.sun.star.deployment.PackageInformationProvider";
+        provider = (XPackageInformationProvider) UnoRuntime.queryInterface(XPackageInformationProvider.class, context.getValueByName(service));
+        if (provider != null) {
+            location = provider.getPackageLocation(identifier);
         }
-        catch (Exception e) { e.printStackTrace(); }
-        if (xProvider != null) location = xProvider.getPackageLocation(identifier);
         return location;
     }
 
+    public static Locale getCurrentLocale(XComponentContext context)
+        throws NoSuchElementException,
+               Exception
+    {
+        String nodepath = "/org.openoffice.Setup/L10N";
+        String config = "";
+        config = (String) getConfiguration(context, nodepath).getByHierarchicalName("ooLocale");
+        String[] parts = config.split("-");
+        Locale locale = new Locale(parts[0], "", "");
+        if (parts.length > 1) {
+            locale.Country = parts[1];
+        }
+        else {
+            Object service = createService(context, "com.sun.star.i18n.LocaleData");
+            XLocaleData data = (XLocaleData) UnoRuntime.queryInterface(XLocaleData.class, service);
+            locale.Country = data.getLanguageCountryInfo(locale).Country;
+        }
+        return locale;
+    }
+
+    public static XStringResourceResolver getResourceResolver(XComponentContext ctx,
+                                                              String identifier,
+                                                              String filename)
+        throws NoSuchElementException,
+               Exception
+    {
+        String path = "resource";
+        return getResourceResolver(ctx, identifier, path, filename);
+    }
+
+    public static XStringResourceResolver getResourceResolver(XComponentContext ctx,
+                                                              String identifier,
+                                                              String path,
+                                                              String filename)
+        throws NoSuchElementException,
+               Exception
+    {
+        Locale locale = getCurrentLocale(ctx);
+        return getResourceResolver(ctx, identifier, path, filename, locale);
+    }
+
+    public static XStringResourceResolver getResourceResolver(XComponentContext ctx,
+                                                              String identifier,
+                                                              String path,
+                                                              String filename,
+                                                              Locale locale)
+    {
+        String name = "com.sun.star.resource.StringResourceWithLocation";
+        String location = getPackageLocation(ctx, identifier, path);
+        Object service = createService(ctx, name, location, true, locale, filename, "", null);
+        return (XStringResourceResolver) UnoRuntime.queryInterface(XStringResourceResolver.class, service);
+    }
 
     public static URL getDriverURL(String location)
     {
         URL url = null;
-        try
-        {
+        try {
             url = new URL("jar:" + location + "!/");
         }
-        catch (Exception e) { e.printStackTrace(); }
+        catch (java.lang.Exception e) {
+            e.printStackTrace();
+        }
         return url;
     }
+
     public static URL getDriverURL(String location, String jar)
     {
         return getDriverURL(location + jar);
@@ -136,37 +274,13 @@ public class UnoHelper
         return getDriverURL(location + "/" + path + "/" + jar);
     }
 
-
-    public static DriverPropertyInfo[] getDriverPropertyInfos()
-    {
-        ArrayList<DriverPropertyInfo> infos = new ArrayList<>();
-        DriverPropertyInfo info1 = getDriverInfo("AutoIncrementCreation",
-                                                 "GENERATED BY DEFAULT AS IDENTITY");
-        infos.add(0, info1);
-        DriverPropertyInfo info2 = getDriverInfo("AutoRetrievingStatement",
-                                                 "CALL IDENTITY()");
-        infos.add(0, info2);
-        int len = infos.size();
-        return infos.toArray(new DriverPropertyInfo[len]);
-    }
-
-
-    public static DriverPropertyInfo getDriverInfo(String name, String value)
-    {
-        DriverPropertyInfo info = new DriverPropertyInfo();
-        info.Name = name;
-        info.Value = value;
-        info.IsRequired = true;
-        info.Choices = new String[0];
-        return info;
-    }
-
     public static String getDefaultPropertyValue(PropertyValue[] properties, String name, String value)
         throws IllegalArgumentException
     {
         for (PropertyValue property : properties) {
-            if (property.Name.equals(name))
+            if (property.Name.equals(name)) {
                 return AnyConverter.toString(property.Value);
+            }
         }
         return value;
     }
@@ -175,8 +289,9 @@ public class UnoHelper
         throws IllegalArgumentException
     {
         for (PropertyValue property : properties) {
-            if (property.Name.equals(name))
+            if (property.Name.equals(name)) {
                 return AnyConverter.toBoolean(property.Value);
+            }
         }
         return value;
     }
@@ -185,27 +300,30 @@ public class UnoHelper
         throws IllegalArgumentException
     {
         for (PropertyValue property : properties) {
-            if (property.Name.equals(name))
+            if (property.Name.equals(name)) {
                 return property.Value;
+            }
         }
         return value;
     }
 
-
-    
     public static Property getProperty(String name, String type)
     {
         short attributes = 0;
         return getProperty(name, type, attributes);
     }
 
+    public static Property getProperty(String name, int handle, String type)
+    {
+        short attributes = 0;
+        return getProperty(name, handle, type, attributes);
+    }
 
     public static Property getProperty(String name, String type, short attributes)
     {
         int handle = -1;
         return getProperty(name, handle, type, attributes);
     }
-
 
     public static Property getProperty(String name, int handle, String type, short attributes)
     {
@@ -217,17 +335,41 @@ public class UnoHelper
         return property;
     }
 
-    public static java.sql.SQLException getSQLException(Exception e)
+    public static String getStackTrace(Throwable e)
+    {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
+    }
+
+    public static WrappedTargetException getWrappedException(Exception e)
+    {
+        WrappedTargetException exception = null;
+        if (e != null) {
+            exception = new WrappedTargetException(e.getMessage());
+            exception.Context = e.Context;
+            exception.TargetException = e;
+        }
+        return exception;
+    }
+
+    public static java.sql.SQLException getSQLException(java.lang.Exception e)
     {
         return new java.sql.SQLException(e.getMessage(), e);
     }
-    
-    
+
+    public static SQLException getSQLException(Exception e, XInterface component)
+    {
+        SQLException exception = new SQLException(e.getMessage());
+        exception.Context = component;
+        return exception;
+    }
+
     public static SQLException getSQLException(java.sql.SQLException e, XInterface component)
     {
         SQLException exception = null;
-        if (e != null)
-        {
+        if (e != null) {
             exception = new SQLException(e.getMessage());
             exception.Context = component;
             exception.SQLState = e.getSQLState();
@@ -240,18 +382,26 @@ public class UnoHelper
     private static Object _getNextSQLException(java.sql.SQLException e, XInterface component)
     {
         Object exception = Any.VOID;
-        if (e != null)
-        {
+        if (e != null) {
             exception = getSQLException(e, component);
         }
+        return exception;
+    }
+
+    public static SQLException getLoggedSQLException(XInterface component,
+                                                     ResourceBasedEventLogger logger,
+                                                     java.sql.SQLException throwable)
+    {
+        
+        SQLException exception = getSQLException(throwable, component);
+        logger.log(LogLevel.SEVERE, throwable);
         return exception;
     }
 
     public static String getObjectString(Object object)
     {
         String value = null;
-        if (AnyConverter.isString(object))
-        {
+        if (AnyConverter.isString(object)) {
             value = AnyConverter.toString(object);
             System.out.println("UnoHelper.getObjectString() 1");
         }
@@ -261,8 +411,7 @@ public class UnoHelper
     public static Date getUnoDate(java.sql.Date date)
     {
         Date value = new Date();
-        if (date != null)
-        {
+        if (date != null) {
             LocalDate localdate = date.toLocalDate();
             value.Year = (short) localdate.getYear();
             value.Month = (short) localdate.getMonthValue();
@@ -271,19 +420,16 @@ public class UnoHelper
         return value;
     }
 
-
     public static java.sql.Date getJavaDate(Date date)
     {
         LocalDate localdate = LocalDate.of(date.Year, date.Month, date.Day);
         return java.sql.Date.valueOf(localdate);
     }
 
-
     public static Time getUnoTime(java.sql.Time time)
     {
         Time value = new Time();
-        if (time != null)
-        {
+        if (time != null) {
             LocalTime localtime = time.toLocalTime();
             value.Hours = (short) localtime.getHour();
             value.Minutes = (short) localtime.getMinute();
@@ -294,19 +440,16 @@ public class UnoHelper
         return value;
     }
 
-
     public static java.sql.Time getJavaTime(Time time)
     {
         LocalTime localtime = LocalTime.of(time.Hours, time.Minutes, time.Seconds, time.NanoSeconds);
         return java.sql.Time.valueOf(localtime);
     }
 
-
     public static DateTime getUnoDateTime(java.sql.Timestamp timestamp)
     {
         DateTime value = new DateTime();
-        if (timestamp != null)
-        {
+        if (timestamp != null) {
             LocalDateTime localdatetime = timestamp.toLocalDateTime();
             value.Year = (short) localdatetime.getYear();
             value.Month = (short) localdatetime.getMonthValue();
@@ -320,44 +463,41 @@ public class UnoHelper
         return value;
     }
 
-
     public static java.sql.Timestamp getJavaDateTime(DateTime timestamp)
     {
         LocalDateTime localdatetime = LocalDateTime.of(timestamp.Year, timestamp.Month, timestamp.Day, timestamp.Hours, timestamp.Minutes, timestamp.Seconds, timestamp.NanoSeconds);
         return java.sql.Timestamp.valueOf(localdatetime);
     }
 
-
     public static Object getObjectFromResult(java.sql.ResultSet result, int index)
     {
         Object value = null;
-        try
-        {
+        try {
             value = result.getObject(index);
         }
-        catch (java.sql.SQLException e) {e.getStackTrace();}
+        catch (java.sql.SQLException e) {
+            e.getStackTrace();
+        }
         return value;
     }
-
 
     public static String getResultSetValue(java.sql.ResultSet result, int index)
     {
         String value = null;
-        try
-        {
+        try {
             value = result.getString(index);
         }
-        catch (java.sql.SQLException e) {e.getStackTrace();}
+        catch (java.sql.SQLException e) {
+            e.getStackTrace();
+        }
         return value;
     }
-
 
     public static Object getValueFromResult(java.sql.ResultSet result, int index)
     {
         // TODO: 'TINYINT' is buggy: don't use it
         Object value = null;
-        try
-        {
+        try {
             String dbtype = result.getMetaData().getColumnTypeName(index);
             if (dbtype == "VARCHAR")
                 value = result.getString(index);
@@ -382,13 +522,11 @@ public class UnoHelper
             else if (dbtype == "DATE")
                 value = result.getDate(index);
         }
-        catch (java.sql.SQLException e)
-        {
+        catch (java.sql.SQLException e) {
             e.getStackTrace();
         }
         return value;
     }
-
 
     public static Integer getConstantValue(Class<?> clazz, String name)
     throws java.sql.SQLException
@@ -405,7 +543,6 @@ public class UnoHelper
         return value;
     }
 
-
     public static int mapSQLDataType(int type)
     {
         Map<Integer, Integer> maps = Map.ofEntries(Map.entry(-16, -1),
@@ -418,7 +555,6 @@ public class UnoHelper
                                                    Map.entry(2012, 2006),
                                                    Map.entry(2013, 12),
                                                    Map.entry(2014, 12));
-
         if (maps.containsKey(type)) {
             System.out.println("UnoHelper.mapSQLDataType() Type: " + type);
             type = maps.get(type);
@@ -480,8 +616,7 @@ public class UnoHelper
         StringBuffer buffer = new StringBuffer();
         ClassLoader cl = ClassLoader.getSystemClassLoader();
         URL[] urls = ((URLClassLoader)cl).getURLs();
-        for (URL url : urls)
-        {
+        for (URL url : urls) {
             buffer.append(url.getFile());
             buffer.append(System.getProperty("path.separator"));
         }
