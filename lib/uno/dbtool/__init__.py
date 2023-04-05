@@ -30,6 +30,9 @@
 from .dbtool import checkDataBase
 from .dbtool import createDataSource
 from .dbtool import createStaticTable
+from .dbtool import currentDateTime
+from .dbtool import currentDateTimeInTZ
+from .dbtool import currentUnoDateTime
 from .dbtool import executeQueries
 from .dbtool import executeSqlQueries
 from .dbtool import getConnectionInfo
@@ -44,6 +47,8 @@ from .dbtool import getDataSourceConnection
 from .dbtool import getDataSourceLocation
 from .dbtool import getDataSourceInfo
 from .dbtool import getDataSourceJavaInfo
+from .dbtool import getDateTimeInTZToString
+from .dbtool import getDateTimeFromString
 from .dbtool import getDictFromResult
 from .dbtool import getDriverPropertyInfo
 from .dbtool import getDriverPropertyInfos
@@ -57,8 +62,10 @@ from .dbtool import getRowDict
 from .dbtool import getRowValue
 from .dbtool import getSequenceFromResult
 from .dbtool import getSqlException
+from .dbtool import getDateTimeToString
 from .dbtool import getUnoType
 from .dbtool import getValueFromResult
 from .dbtool import registerDataSource
+from .dbtool import toUnoDateTime
 
 from .array import Array
