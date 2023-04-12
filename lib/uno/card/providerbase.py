@@ -1,4 +1,7 @@
-/*
+#!
+# -*- coding: utf-8 -*-
+
+"""
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
 ║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
@@ -22,27 +25,67 @@
 ║   OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                                    ║
 ║                                                                                    ║
 ╚════════════════════════════════════════════════════════════════════════════════════╝
- */
+"""
 
-#ifndef __com_sun_star_auth_XRestDataParser_idl__
-#define __com_sun_star_auth_XRestDataParser_idl__
+import uno
+import unohelper
 
-#include <com/sun/star/uno/XInterface.idl>
+from com.sun.star.logging.LogLevel import SEVERE
 
-module com { module sun { module star { module auth {
+from com.sun.star.ucb.ConnectionMode import OFFLINE
+from com.sun.star.ucb.ConnectionMode import ONLINE
 
-interface XRestDataParser: com::sun::star::uno::XInterface
-{
+from .unotool import getConnectionMode
 
-    any parseResponse([in] any Response);
+from .dbtool import getSqlException
 
-    any filterResponse([in] any Response);
+from .logger import getLogger
 
-    [attribute, readonly] string DataType;
+from .configuration import g_path
+from .configuration import g_errorlog
+from .configuration import g_basename
 
-};
+import traceback
 
 
-}; }; }; };
+class ProviderBase(unohelper.Base):
 
-#endif
+    @property
+    def Host(self):
+        return self._server
+    @property
+    def BaseUrl(self):
+        return self._scheme + self._server + g_path
+
+    def isOnLine(self):
+        return getConnectionMode(self._ctx, self.Host) != OFFLINE
+    def isOffLine(self):
+        return getConnectionMode(self._ctx, self.Host) != ONLINE
+
+    def getSqlException(self, state, code, method, *args):
+        logger = getLogger(self._ctx, g_errorlog, g_basename)
+        state = logger.resolveString(state)
+        msg = logger.resolveString(code, *args)
+        logger.logp(SEVERE, g_basename, method, msg)
+        error = getSqlException(state, code, msg, self)
+        return error
+
+    # Need to be implemented method
+    def insertUser(self, database, request, scheme, server, name, pwd):
+        raise NotImplementedError
+
+    def initAddressbooks(self, database, user, request):
+        raise NotImplementedError
+
+    def getAddressbookUrl(self, request, addressbook, user, password, url):
+        raise NotImplementedError
+
+    def firstCardPull(self, database, user, addressbook):
+        raise NotImplementedError
+
+    def getModifiedCardByToken(self, request, user, password, url, token):
+        raise NotImplementedError
+
+    def getModifiedCard(self, request, user, password, url, urls):
+        raise NotImplementedError
+

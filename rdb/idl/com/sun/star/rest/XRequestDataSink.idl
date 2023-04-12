@@ -24,24 +24,22 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
  */
 
-#ifndef __com_sun_star_auth_XRestDataParser_idl__
-#define __com_sun_star_auth_XRestDataParser_idl__
+#ifndef __com_sun_star_rest_XRequestDataSink_idl__
+#define __com_sun_star_rest_XRequestDataSink_idl__
 
-#include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/io/XActiveDataSink.idl>
 
-module com { module sun { module star { module auth {
+module com { module sun { module star { module rest {
 
-interface XRestDataParser: com::sun::star::uno::XInterface
+interface XRequestDataSink: com::sun::star::io::XActiveDataSink
 {
 
-    any parseResponse([in] any Response);
-
-    any filterResponse([in] any Response);
-
-    [attribute, readonly] string DataType;
+    sequence<byte> read([in] long Length);
+    void close();
+    void seek([in] hyper Location);
+    hyper tell();
 
 };
-
 
 }; }; }; };
 
