@@ -27,17 +27,35 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from .oauth2config import g_oauth2
+import uno
+import unohelper
 
-from .oauth2lib import InteractionRequest
-from .oauth2lib import NoOAuth2
-from .oauth2lib import OAuth2OOo
 
-from .requestdatasink import RequestDataSink
+from com.sun.star.rest import XRequestDataSink
 
-from .oauth2tools import getRequest
-from .oauth2tools import getOAuth2
+import traceback
 
-from .oauth2core import getOAuth2UserName
-from .oauth2core import getOAuth2Token
+
+class RequestDataSink(unohelper.Base,
+                      XRequestDataSink):
+    def __init__(self, ctx):
+        self._ctx = ctx
+        self._input = None
+
+    #XActiveDataSink
+    def setInputStream(self, input):
+        self._input = input
+    def getInputStream(self):
+        return self._input
+
+    #Python File Like Object
+    def read(self, length):
+        length, sequence = self._input.readBytes(None, length)
+        return sequence.value
+    def close(self):
+        self._input.closeInput()
+    def seek(self, location):
+        self._input.seek(location)
+    def tell(self):
+        return self._input.getPosition()
 
