@@ -74,18 +74,15 @@ class ProviderBase(unohelper.Base):
     def insertUser(self, database, request, scheme, server, name, pwd):
         raise NotImplementedError
 
-    def initAddressbooks(self, database, user, request):
-        raise NotImplementedError
-
-    def getAddressbookUrl(self, request, addressbook, user, password, url):
+    def initAddressbooks(self, database, user):
         raise NotImplementedError
 
     def firstCardPull(self, database, user, addressbook):
         raise NotImplementedError
 
-    def getModifiedCardByToken(self, request, user, password, url, token):
+    def getCardByToken(self, user, addressbook):
         raise NotImplementedError
 
-    def getModifiedCard(self, request, user, password, url, urls):
+    def mergeCardByToken(self, database, user, addressbook, urls):
         raise NotImplementedError
 

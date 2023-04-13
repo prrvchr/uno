@@ -54,35 +54,31 @@ class AddressBooks(unohelper.Base):
         print("AddressBooks.__init__() 2")
 
     def initAddressbooks(self, database, user, addressbooks):
-        #mri = createService(self._ctx, 'mytools.Mri')
-        #mri.inspect(addressbooks)
-        changed = False
-        for abook in addressbooks:
-            name, url, tag, token = self._getAddressbookData(abook)
+        count = 0
+        modified = False
+        for url, name, tag, token in addressbooks:
             print("AddressBooks.initAddressbooks() 1 Name: %s - Url: %s - Tag: %s - Token: %s" % (name, url, tag, token))
             if self._hasAddressbook(url):
                 addressbook = self._getAddressbook(url)
                 if addressbook.hasNameChanged(name):
                     database.updateAddressbookName(addressbook.Id, name)
                     addressbook.setName(name)
-                    changed = True
+                    modified = True
                     print("AddressBooks.initAddressbooks() 2 %s" % (name, ))
             else:
                 index = database.insertAddressbook(user, url, name, tag, token)
                 addressbook = AddressBook(self._ctx, index, url, name, tag, token, True)
                 self._addressbooks[url] = addressbook
-                changed = True
+                modified = True
                 print("AddressBooks.initAddressbooks() 3 %s - %s - %s" % (index, name, url))
+            count += 1
         print("AddressBooks.initAddressbooks() 4")
-        return changed
+        return count, modified
 
     def getAddressbooks(self):
         return self._addressbooks.values()
 
     # Private methods
-    def _getAddressbookData(self, abook):
-        return abook.getValue('Name'), abook.getValue('Url'), abook.getValue('Tag'), abook.getValue('Token')
-
     def _hasAddressbook(self, url):
         return url in self._addressbooks
 
