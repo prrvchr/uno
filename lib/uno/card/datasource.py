@@ -98,7 +98,8 @@ class DataSource(unohelper.Base):
             self._users[name] = user
             self._maps[uri] = name
         print("DataSource.getConnection () 2")
-        self._provider.initAddressbooks(self._database, user)
+        if user.isOnLine():
+            self._provider.initAddressbooks(self._database, user)
         print("DataSource.getConnection () 3")
         connection = self._database.getConnection(name, user.getPassword())
         print("DataSource.getConnection () 4")
