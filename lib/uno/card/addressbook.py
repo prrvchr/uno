@@ -56,21 +56,21 @@ class AddressBooks(unohelper.Base):
     def initAddressbooks(self, database, user, addressbooks):
         count = 0
         modified = False
-        for url, name, tag, token in addressbooks:
-            print("AddressBooks.initAddressbooks() 1 Name: %s - Url: %s - Tag: %s - Token: %s" % (name, url, tag, token))
-            if self._hasAddressbook(url):
-                addressbook = self._getAddressbook(url)
+        for uri, name, tag, token in addressbooks:
+            print("AddressBooks.initAddressbooks() 1 Name: %s - Uri: %s - Tag: %s - Token: %s" % (name, uri, tag, token))
+            if self._hasAddressbook(uri):
+                addressbook = self._getAddressbook(uri)
                 if addressbook.hasNameChanged(name):
                     database.updateAddressbookName(addressbook.Id, name)
                     addressbook.setName(name)
                     modified = True
                     print("AddressBooks.initAddressbooks() 2 %s" % (name, ))
             else:
-                index = database.insertAddressbook(user, url, name, tag, token)
-                addressbook = AddressBook(self._ctx, index, url, name, tag, token, True)
-                self._addressbooks[url] = addressbook
+                aid = database.insertAddressbook(user, uri, name, tag, token)
+                addressbook = AddressBook(self._ctx, aid, uri, name, tag, token, True)
+                self._addressbooks[uri] = addressbook
                 modified = True
-                print("AddressBooks.initAddressbooks() 3 %s - %s - %s" % (index, name, url))
+                print("AddressBooks.initAddressbooks() 3 %s - %s - %s" % (aid, name, uri))
             count += 1
         print("AddressBooks.initAddressbooks() 4")
         return count, modified
@@ -79,34 +79,34 @@ class AddressBooks(unohelper.Base):
         return self._addressbooks.values()
 
     # Private methods
-    def _hasAddressbook(self, url):
-        return url in self._addressbooks
+    def _hasAddressbook(self, uri):
+        return uri in self._addressbooks
 
-    def _getAddressbook(self, url):
-        return self._addressbooks[url]
+    def _getAddressbook(self, uri):
+        return self._addressbooks[uri]
 
     def _getAddressbooks(self, metadata, new):
         i = 0
         addressbooks = OrderedDict()
-        indexes, names, tags, tokens = self._getAddressbookMetaData(metadata)
-        for url in metadata.getValue('Paths'):
+        aids, names, tags, tokens = self._getAddressbookMetaData(metadata)
+        for uri in metadata.getValue('Uris'):
             # FIXME: If url is None we don't add this addressbook
-            if url is None:
+            if uri is None:
                 continue
-            print("AddressBook._getAddressbooks() Url: %s - Name: %s - Index: %s - Tag: %s - Token: %s" % (url, names[i], indexes[i], tags[i], tokens[i]))
-            addressbooks[url] = AddressBook(self._ctx, indexes[i], url, names[i], tags[i], tokens[i], new)
+            print("AddressBook._getAddressbooks() Url: %s - Name: %s - Index: %s - Tag: %s - Token: %s" % (uri, names[i], aids[i], tags[i], tokens[i]))
+            addressbooks[uri] = AddressBook(self._ctx, aids[i], uri, names[i], tags[i], tokens[i], new)
             i += 1
         return addressbooks
 
     def _getAddressbookMetaData(self, data):
-        return data.getValue('Addressbooks'), data.getValue('Names'), data.getValue('Tags'), data.getValue('Tokens')
+        return data.getValue('Aids'), data.getValue('Names'), data.getValue('Tags'), data.getValue('Tokens')
 
 
 class AddressBook(unohelper.Base):
-    def __init__(self, ctx, index, url, name, tag, token, new=False):
+    def __init__(self, ctx, aid, uri, name, tag, token, new=False):
         self._ctx = ctx
-        self._index = index
-        self._url = url
+        self._aid = aid
+        self._uri = uri
         self._name = name
         self._tag = tag
         self._token = token
@@ -114,10 +114,10 @@ class AddressBook(unohelper.Base):
 
     @property
     def Id(self):
-        return self._index
+        return self._aid
     @property
-    def Path(self):
-        return self._url
+    def Uri(self):
+        return self._uri
     @property
     def Name(self):
         return self._name
@@ -134,7 +134,7 @@ class AddressBook(unohelper.Base):
         return new
 
     def hasNameChanged(self, name):
-        return self.Name != name
+        return self._name != name
 
     def setName(self, name):
         self.Name = name

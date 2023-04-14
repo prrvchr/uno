@@ -40,7 +40,8 @@ from .logger import getLogger
 from .options import OptionsManager
 
 from .dbtool import getDriverPropertyInfos
-from .dbtool import getSqlException
+
+from .providerbase import getSqlException
 
 from .unotool import createMessageBox
 from .unotool import createService

@@ -32,16 +32,10 @@ import unohelper
 
 from com.sun.star.logging.LogLevel import SEVERE
 
-from com.sun.star.ucb.ConnectionMode import OFFLINE
-from com.sun.star.ucb.ConnectionMode import ONLINE
-
-from .unotool import getConnectionMode
-
 from .dbtool import getSqlException
 
 from .logger import getLogger
 
-from .configuration import g_path
 from .configuration import g_errorlog
 from .configuration import g_basename
 
@@ -50,26 +44,6 @@ import traceback
 
 class ProviderBase(unohelper.Base):
 
-    @property
-    def Host(self):
-        return self._server
-    @property
-    def BaseUrl(self):
-        return self._scheme + self._server + g_path
-
-    def isOnLine(self):
-        return getConnectionMode(self._ctx, self.Host) != OFFLINE
-    def isOffLine(self):
-        return getConnectionMode(self._ctx, self.Host) != ONLINE
-
-    def getSqlException(self, state, code, method, *args):
-        logger = getLogger(self._ctx, g_errorlog, g_basename)
-        state = logger.resolveString(state)
-        msg = logger.resolveString(code, *args)
-        logger.logp(SEVERE, g_basename, method, msg)
-        error = getSqlException(state, code, msg, self)
-        return error
-
     # Need to be implemented method
     def insertUser(self, database, request, scheme, server, name, pwd):
         raise NotImplementedError
@@ -77,12 +51,20 @@ class ProviderBase(unohelper.Base):
     def initAddressbooks(self, database, user):
         raise NotImplementedError
 
-    def firstCardPull(self, database, user, addressbook):
+    def firstPullCard(self, database, user, addressbook):
         raise NotImplementedError
 
-    def getCardByToken(self, user, addressbook):
+    def pullCard(self, database, user, addressbook, dltd, mdfd):
         raise NotImplementedError
 
-    def mergeCardByToken(self, database, user, addressbook, urls):
+    def parseCard(self, connection):
         raise NotImplementedError
+
+def getSqlException(ctx, source, state, code, method, *args):
+    logger = getLogger(ctx, g_errorlog, g_basename)
+    state = logger.resolveString(state)
+    msg = logger.resolveString(code, *args)
+    logger.logp(SEVERE, g_basename, method, msg)
+    error = getSqlException(state, code, msg, source)
+    return error
 
