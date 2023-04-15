@@ -38,8 +38,8 @@ from com.sun.star.ucb.ConnectionMode import ONLINE
 
 from com.sun.star.sdbc import XRestUser
 
-from .oauth2lib import getRequest
-from .oauth2lib import g_oauth2
+from .oauth2 import getRequest
+from .oauth2 import g_oauth2
 
 from .unotool import executeDispatch
 
