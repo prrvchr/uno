@@ -98,16 +98,15 @@ class Replicator(unohelper.Base):
                 self._started.wait()
                 if not self._disposed.is_set():
                     print("replicator.run()3 synchronize started ****************************************")
-                    dltd, mdfd = self._synchronize(logger)
-                    total = dltd + mdfd
+                    pages, total = self._synchronize(logger)
                     if total > 0:
                         print("replicator.run()4 synchronize started CardSync.jar")
-                        self._provider.parseCard(self._database.Connection)
+                        self._provider.parseCard(self._database)
                         print("replicator.run()5 synchronize ended CardSync.jar")
-                        self._database.syncGroups()
+                        self._provider.syncGroups(self._database)
                     self._database.dispose()
-                    logger.logprb(INFO, 'Replicator', '_replicate()', 101, total, mdfd, dltd)
-                    print("replicator.run()6 synchronize ended query=%s modified=%s deleted=%s *******************************************" % (total, mdfd, dltd))
+                    logger.logprb(INFO, 'Replicator', '_replicate()', 101, pages, total)
+                    print("replicator.run()6 synchronize ended Pages: %s - Total: %s *******************************************" % (pages, total))
                     if self._started.is_set():
                         print("replicator.run()7 start waitting *******************************************")
                         self._paused.clear()
@@ -120,7 +119,7 @@ class Replicator(unohelper.Base):
             print(msg)
 
     def _synchronize(self, logger):
-        dltd = mdfd = 0
+        pages = count = 0
         for user in self._users.values():
             if self._canceled():
                 break
@@ -130,20 +129,21 @@ class Replicator(unohelper.Base):
                 logger.logprb(INFO, 'Replicator', '_synchronize()', 111)
             elif not self._canceled():
                 logger.logprb(INFO, 'Replicator', '_synchronize()', 112, user.Name)
-                dltd, mdfd = self._syncUser(logger, user, dltd, mdfd)
+                pages, count = self._syncUser(logger, user, pages, count)
                 logger.logprb(INFO, 'Replicator', '_synchronize()', 113, user.Name)
-        return dltd, mdfd
+        return pages, count
 
-    def _syncUser(self, logger, user, dltd, mdfd):
+    def _syncUser(self, logger, user, pages, count):
         for addressbook in user.getAddressbooks():
             print("Replicator._syncUser() AddressBook Name: %s - Path: %s" % (addressbook.Name, addressbook.Uri))
         for addressbook in user.getAddressbooks():
+            token = None
             if self._canceled():
                 break
             if addressbook.isNew():
                 print("Replicator._syncUser() New AddressBook Path: %s" % addressbook.Uri)
-                mdfd += self._provider.firstPullCard(self._database, user, addressbook)
+                pages, count = self._provider.firstPullCard(self._database, user, addressbook, pages, count)
             elif not self._canceled():
-                dltd, mdfd = self._provider.pullCard(self._database, user, addressbook, dltd, mdfd)
-        return dltd, mdfd
+                pages, count = self._provider.pullCard(self._database, user, addressbook, pages, count)
+        return pages, count
 

@@ -158,9 +158,8 @@ class DataBase(unohelper.Base):
         columns = OrderedDict()
         call = getDataSourceCall(self._ctx, connection, 'getAddressbookColumns')
         result = call.executeQuery()
-        count = result.MetaData.ColumnCount +1
         while result.next():
-            row = getRowDict(result, None, count)
+            row = getRowDict(result)
             view = row.get("ViewName")
             if view is not None:
                 if view not in columns:
@@ -232,6 +231,42 @@ class DataBase(unohelper.Base):
             user = getKeyMapFromResult(result)
         call.close()
         return user
+
+    def getDataBaseMetaData(self, tag):
+        identifiers = self._getColumnIdentifiers(tag)
+        fields = self._getResourceFields()
+        return identifiers, fields
+
+    def _getColumnIdentifiers(self, tag):
+        identifiers = {}
+        call = self._getCall('getColumnIdentifiers')
+        call.setString(1, tag)
+        result = call.executeQuery()
+        while result.next():
+            identifiers[result.getString(1)] = result.getInt(2)
+        result.close()
+        call.close()
+        return identifiers
+
+    def _getResourceFields(self):
+        fields = {}
+        call = self._getCall('getResourceFields')
+        result = call.executeQuery()
+        while result.next():
+            fields[result.getString(1)] = result.getString(2)
+        result.close()
+        call.close()
+        return fields
+
+# Procedures called by the User
+    def getUserFields(self):
+        fields = []
+        call = self._getCall('getFieldNames')
+        result = call.executeQuery()
+        fields = getSequenceFromResult(result)
+        call.close()
+        return tuple(fields)
+
 
     def initAddressbooks(self, user):
         start = self._getLastAddressbookSync()
@@ -414,10 +449,70 @@ class DataBase(unohelper.Base):
         self._setBatchModeOn()
         call = self._getCall('mergeCard')
         call.setInt(1, aid)
-        for url, etag, data in iterator:
-            call.setString(2, url)
+        for cid, etag, deleted, data in iterator:
+            call.setString(2, cid)
             call.setString(3, etag)
-            call.setString(4, data)
+            call.setBoolean(4, deleted)
+            call.setString(5, data)
+            call.addBatch()
+            count += 1
+        if count:
+            call.executeBatch()
+        call.close()
+        self.Connection.commit()
+        self._setBatchModeOff()
+        return count
+
+    def getLastUserSync(self):
+        call = self._getCall('getLastUserSync')
+        call.execute()
+        start = call.getObject(1, None)
+        call.close()
+        return start
+
+    def updateUserSync(self, timestamp):
+        call = self._getCall('updateUser')
+        call.setObject(1, timestamp)
+        call.execute()
+        call.close()
+
+    def getChangedCard(self, start, stop):
+        call = self._getCall('getChangedCards')
+        call.setObject(1, start)
+        call.setObject(2, stop)
+        result = call.executeQuery()
+        while result.next():
+            yield result.getInt(1), result.getInt(2), result.getString(3), result.getString(4)
+        result.close()
+        call.close()
+
+    def mergeCardValue(self, iterator):
+        count = 0
+        self._setBatchModeOn()
+        call = self._getCall('mergeCardValue')
+        for cid, column, value in iterator:
+            call.setString(1, cid)
+            call.setInt(2, column)
+            call.setString(3, value)
+            call.addBatch()
+            count += 1
+        if count:
+            call.executeBatch()
+        call.close()
+        self.Connection.commit()
+        self._setBatchModeOff()
+        return count
+
+    def mergeGroup(self, aid, iterator):
+        count = 0
+        self._setBatchModeOn()
+        call = self._getCall('mergeGroup')
+        call.setString(1, aid)
+        for gid, deleted, name, timestamp in iterator:
+            call.setString(2, gid)
+            call.setBoolean(3, deleted)
+            call.setString(4, name)
+            call.setTimestamp(5, timestamp)
             call.addBatch()
             count += 1
         if count:
@@ -523,7 +618,7 @@ class DataBase(unohelper.Base):
         call.addBatch()
         return 1
 
-    def mergeGroup(self, user, resource, name, timestamp, deleted):
+    def mergeGroup1(self, user, resource, name, timestamp, deleted):
         call = self._getBatchedCall('mergeGroup')
         call.setString(1, 'contactGroups/')
         call.setLong(2, user.People)

@@ -77,42 +77,23 @@ def getSqlQuery(ctx, name, format=None):
         c = (c1, c2, c3, c4, c5, c6, c7, c8, c9, k1, k2, k3)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "TableColumn"(%s)' % ','.join(c)
 
+    elif name == 'createTableResources':
+        c1 = '"Resource" INTEGER NOT NULL PRIMARY KEY'
+        c2 = '"Path" VARCHAR(100) NOT NULL'
+        c3 = '"Name" VARCHAR(100) NOT NULL'
+        c4 = '"View" VARCHAR(100) DEFAULT NULL'
+        c = (c1, c2, c3, c4)
+        query = 'CREATE TEXT TABLE IF NOT EXISTS "Resources"(%s)' % ','.join(c)
+
     elif name == 'createTableProperties':
         c1 = '"Property" INTEGER NOT NULL PRIMARY KEY'
-        c2 = '"Value" VARCHAR(100) NOT NULL'
-        c3 = '"Getter" VARCHAR(100) NOT NULL'
-        c4 = '"Method" SMALLINT NOT NULL'
-        c5 = '"View" VARCHAR(100) DEFAULT NULL'
-        c = (c1, c2, c3, c4, c5)
+        c2 = '"Resource" INTEGER NOT NULL'
+        c3 = '"Path" VARCHAR(100) NOT NULL'
+        c4 = '"Name" VARCHAR(100) NOT NULL'
+        k1 = 'CONSTRAINT "ForeignTableResources" FOREIGN KEY("Resource") REFERENCES '
+        k1 += '"Resources"("Resource") ON DELETE CASCADE ON UPDATE CASCADE'
+        c = (c1, c2, c3, c4, k1)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "Properties"(%s)' % ','.join(c)
-
-    elif name == 'createTableParameters':
-        c1 = '"Parameter" INTEGER NOT NULL PRIMARY KEY'
-        c2 = '"Getter" VARCHAR(100) NOT NULL'
-        c = (c1, c2)
-        query = 'CREATE TEXT TABLE IF NOT EXISTS "Parameters"(%s)' % ','.join(c)
-
-    elif name == 'createTableTypes':
-        c1 = '"Type" INTEGER NOT NULL PRIMARY KEY'
-        c2 = '"Value" VARCHAR(100) NOT NULL'
-        c3 = '"Column" VARCHAR(100) NOT NULL'
-        c4 = '"Order" INTEGER NOT NULL'
-        c = (c1, c2, c3, c4)
-        query = 'CREATE TEXT TABLE IF NOT EXISTS "Types"(%s)' % ','.join(c)
-
-    elif name == 'createTablePropertyParameter':
-        c1 = '"Property" INTEGER NOT NULL'
-        c2 = '"Parameter" INTEGER NOT NULL'
-        c3 = '"Column" VARCHAR(100)'
-        c = (c1, c2, c3)
-        query = 'CREATE TEXT TABLE IF NOT EXISTS "PropertyParameter"(%s)' % ','.join(c)
-
-    elif name == 'createTablePropertyType':
-        c1 = '"Property" INTEGER NOT NULL'
-        c2 = '"Type" INTEGER NOT NULL'
-        c3 = '"Group" INTEGER NOT NULL'
-        c = (c1, c2, c3)
-        query = 'CREATE TEXT TABLE IF NOT EXISTS "PropertyType"(%s)' % ','.join(c)
 
     elif name == 'setTableSource':
         query = 'SET TABLE "%s" SOURCE "%s"' % (format, g_csv % format)
@@ -309,14 +290,12 @@ GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
         query = 'SELECT %s FROM %s WHERE %s ORDER BY "TableId","LabelId","TypeId"' % p
 
     elif name == 'getFieldNames':
-        s = '"Fields"."Name"'
-        f1 = '"Fields"'
-        f2 = 'JOIN "Tables" ON "Fields"."Table"=%s AND "Fields"."Column"="Tables"."Table"'
-        f = (f1, f2 % "'Tables'")
-        w1 = '"Tables"."View"=TRUE'
-        w2 = '"Fields"."Table"=%s AND "Fields"."Column"=1' % "'Loop'"
-        p = (s, ' '.join(f), w1, s, f1, w2)
-        query = 'SELECT %s FROM %s WHERE %s UNION SELECT %s FROM %s WHERE %s' % p
+        query = '''\
+SELECT F."Name" FROM "Fields" AS F 
+  JOIN "Tables" AS T ON F."Column"=T."Table" AND F."Table"='Tables' 
+  WHERE T."View"=TRUE 
+UNION 
+SELECT "Name" FROM "Fields" WHERE "Table"='Loop' AND "Column"=1;'''
 
     elif name == 'getDefaultType':
         s1 = '"Tables"."Name" AS "Table"'
@@ -425,7 +404,7 @@ INSERT INTO "Addressbooks" ("User","Uri","Name","Tag","Token") VALUES (0,'/','ad
 
     elif name == 'insertSuperGroup':
         query = """\
-INSERT INTO "Groups" ("User","Uri","Name") VALUES (0,'/','#');
+INSERT INTO "Groups" ("Addressbook","Uri","Name") VALUES (0,'/','#');
 """
 
 # Create Procedure Query
@@ -560,15 +539,20 @@ CREATE PROCEDURE "UpdateAddressbookName"(IN AID INTEGER,
 CREATE PROCEDURE "MergeCard"(IN AID INTEGER,
                              IN URI VARCHAR(256),
                              IN TAG VARCHAR(128),
+                             IN DELETED BOOLEAN,
                              IN DATA VARCHAR(100000))
   SPECIFIC "MergeCard_1"
   MODIFIES SQL DATA
   BEGIN ATOMIC
-    MERGE INTO "Cards" USING (VALUES(AID,URI,TAG,DATA))
-      AS vals(w,x,y,z) ON "Cards"."Addressbook"=vals.w AND "Cards"."Uri"=vals.x
-        WHEN MATCHED THEN UPDATE SET "Tag"=vals.y,"Data"=vals.z
-        WHEN NOT MATCHED THEN INSERT ("Addressbook","Uri","Tag","Data")
-          VALUES vals.w,vals.x,vals.y,vals.z;
+    IF DELETED THEN
+      DELETE FROM "Cards" WHERE "Addressbook"=AID AND "Uri"=URI;
+    ELSE
+      MERGE INTO "Cards" USING (VALUES(AID,URI,TAG,DATA))
+        AS vals(w,x,y,z) ON "Cards"."Addressbook"=vals.w AND "Cards"."Uri"=vals.x
+          WHEN MATCHED THEN UPDATE SET "Tag"=vals.y,"Data"=vals.z
+          WHEN NOT MATCHED THEN INSERT ("Addressbook","Uri","Tag","Data")
+            VALUES vals.w,vals.x,vals.y,vals.z;
+    END IF;
   END"""
 
     elif name == 'createDeleteCard':
@@ -667,7 +651,8 @@ CREATE PROCEDURE "SelectChangedGroups"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
               G1."Group", NULL AS "Name", G1."Name" AS "OldName", 
               'Deleted' AS "Query", G1."RowEnd" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
-      JOIN "Users" AS U ON G1."User"=U."User"
+      JOIN "Addressbooks" AS A ON G1."Addressbook"=A."Addressbook"
+      JOIN "Users" AS U ON A."User"=U."User"
       LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
         ON G1."Group" = G2."Group"
       WHERE G1."Group"!=0 AND G2."Group" IS NULL)
@@ -677,7 +662,8 @@ CREATE PROCEDURE "SelectChangedGroups"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
               G2."Group", G2."Name", NULL AS "OldName", 
               'Inserted' AS "Query", G2."RowStart" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
-      JOIN "Users" AS U ON G2."User"=U."User"
+      JOIN "Addressbooks" AS A ON G2."Addressbook"=A."Addressbook"
+      JOIN "Users" AS U ON A."User"=U."User"
       LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
         ON G2."Group"=G1."Group"
       WHERE G2."Group"!=0 AND  G1."Group" IS NULL)
@@ -687,7 +673,8 @@ CREATE PROCEDURE "SelectChangedGroups"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
               G2."Group", G2."Name", G1."Name" AS "OldName", 
               'Updated' AS "Query", G1."RowEnd" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
-      JOIN "Users" AS U ON G2."User"=U."User"
+      JOIN "Addressbooks" AS A ON G2."Addressbook"=A."Addressbook"
+      JOIN "Users" AS U ON A."User"=U."User"
       INNER JOIN "Groups" FOR SYSTEM_TIME FROM FIRST TO LAST AS G1
         ON G2."Group"=G1."Group" AND G2."RowStart"=G1."RowEnd"
       WHERE G2."Group"!=0)
@@ -768,6 +755,75 @@ CREATE PROCEDURE "SelectAddressbookColumns"()
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
+    DECLARE RSLT CURSOR WITH RETURN FOR 
+      SELECT P."Property" AS "ColumnId", 
+        P."Name" AS "ColumnName", 
+        R."View" AS "ViewName" 
+      FROM "Properties" AS P
+      JOIN "Resources" AS R ON P."Resource"=R."Resource"
+      FOR READ ONLY;
+    OPEN RSLT;
+  END"""
+
+    elif name == 'createSelectColumnIdentifiers':
+        query = """\
+CREATE PROCEDURE "SelectColumnIdentifiers"(IN TAG VARCHAR(20))
+  SPECIFIC "SelectColumnIdentifiers_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE RSLT CURSOR WITH RETURN FOR 
+      SELECT CONCAT_WS(TAG, R."Path", R."Name", P."Path"),
+        P."Property"
+      FROM "Properties" AS P
+      JOIN "Resources" AS R ON P."Resource"=R."Resource"
+      FOR READ ONLY;
+    OPEN RSLT;
+  END"""
+
+    elif name == 'createSelectResourceFields':
+        query = """\
+CREATE PROCEDURE "SelectResourceFields"()
+  SPECIFIC "SelectResourceFields_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE RSLT CURSOR WITH RETURN FOR 
+      SELECT "Path", GROUP_CONCAT("Name" ORDER BY "Resource" SEPARATOR ',') 
+      FROM "Resources" GROUP BY "Path"
+      FOR READ ONLY;
+    OPEN RSLT;
+  END"""
+
+    elif name == 'createMergeGroup':
+        query = """\
+CREATE PROCEDURE "MergeGroup"(IN AID VARCHAR(100),
+                              IN URI VARCHAR(100),
+                              IN DELETED BOOLEAN,
+                              IN NAME VARCHAR(100),
+                              IN DATETIME TIMESTAMP(6))
+  SPECIFIC "MergeGroup_1"
+  MODIFIES SQL DATA
+  BEGIN ATOMIC
+    IF DELETED THEN
+      DELETE FROM "Groups" WHERE "Addressbook"=AID AND "Uri"=URI;
+    ELSE
+      MERGE INTO "Groups" USING (VALUES(AID,URI,NAME,DATETIME))
+        AS vals(w,x,y,z) ON "Addressbook"=vals.w AND "Uri"=vals.x
+          WHEN MATCHED THEN UPDATE
+            SET "Name"=vals.y, "Modified"=vals.z
+          WHEN NOT MATCHED THEN INSERT ("Addressbook","Uri","Name","Created","Modified")
+            VALUES vals.w, vals.x, vals.y, vals.z, vals.z;
+    END IF;
+  END"""
+
+    elif name == 'createSelectAddressbookColumns1':
+        query = """\
+CREATE PROCEDURE "SelectAddressbookColumns"()
+  SPECIFIC "SelectAddressbookColumns_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
       SELECT ROWNUM() AS "ColumnId",
         C."Value" AS "PropertyName",
@@ -815,7 +871,8 @@ CREATE PROCEDURE "SelectCardGroup"()
         ARRAY_AGG(G."Name") AS "Names",
         ARRAY_AGG(G."Group") AS "Groups"
       FROM "Users" AS U
-      LEFT JOIN "Groups" AS G ON U."User"=G."User"
+      INNER JOIN "Addressbooks" AS A ON U."User"=A."User"
+      INNER JOIN "Groups" AS G ON A."Addressbook"=G."Addressbook"
       GROUP BY U."User"
       FOR READ ONLY;
     OPEN RSLT;
@@ -823,14 +880,14 @@ CREATE PROCEDURE "SelectCardGroup"()
 
     elif name == 'createInsertGroup':
         query = """\
-CREATE PROCEDURE "InsertGroup"(IN UID INTEGER,
+CREATE PROCEDURE "InsertGroup"(IN AID INTEGER,
                                IN URI VARCHAR(128),
                                IN NAME VARCHAR(128),
                                OUT GID INTEGER)
   SPECIFIC "InsertGroup_1"
   MODIFIES SQL DATA
   BEGIN ATOMIC
-    INSERT INTO "Groups" ("User","Uri","Name") VALUES (UID,URI,NAME);
+    INSERT INTO "Groups" ("Addressbook","Uri","Name") VALUES (AID,URI,NAME);
     SET GID = IDENTITY();
   END"""
 
@@ -956,31 +1013,6 @@ CREATE PROCEDURE "Merge%(Table)s"(IN "Prefix" VARCHAR(50),
   END"""
         query = q % format
 
-    elif name == 'createMergeGroup':
-        query = """\
-CREATE PROCEDURE "MergeGroup"(IN "Prefix" VARCHAR(50),
-                              IN "PeopleId" INTEGER,
-                              IN "ResourceName" VARCHAR(100),
-                              IN "GroupName" VARCHAR(100),
-                              IN "Time" TIMESTAMP(6),
-                              IN "Deleted" BOOLEAN)
-  SPECIFIC "MergeGroup_1"
-  MODIFIES SQL DATA
-  BEGIN ATOMIC
-    DECLARE "GroupResource" VARCHAR(100);
-    SET "GroupResource" = REPLACE("ResourceName", "Prefix");
-    IF "Deleted"=TRUE THEN
-      DELETE FROM "Groups" WHERE "People"="PeopleId" AND "Resource"="GroupResource";
-    ELSE
-      MERGE INTO "Groups" USING (VALUES("PeopleId","GroupResource","GroupName","Time"))
-        AS vals(w,x,y,z) ON "Groups"."Resource"=vals.x
-          WHEN MATCHED THEN UPDATE
-            SET "People"=vals.w, "Name"=vals.y, "TimeStamp"=vals.z, "GroupSync"=FALSE
-          WHEN NOT MATCHED THEN INSERT ("People","Resource","Name","TimeStamp")
-            VALUES vals.w, vals.x, vals.y, vals.z;
-    END IF;
-  END"""
-
     elif name == 'createMergeConnection':
         q = """\
 CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
@@ -1025,11 +1057,17 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
     elif name == 'updateAddressbookName':
         query = 'CALL "UpdateAddressbookName"(?,?)'
     elif name == 'mergeCard':
-        query = 'CALL "MergeCard"(?,?,?,?)'
+        query = 'CALL "MergeCard"(?,?,?,?,?)'
+    elif name == 'mergeCardValue':
+        query = 'CALL "MergeCardValue"(?,?,?)'
     elif name == 'deleteCard':
         query = 'CALL "DeleteCard"(?,?)'
     elif name == 'getAddressbookColumns':
         query = 'CALL "SelectAddressbookColumns"()'
+    elif name == 'getColumnIdentifiers':
+        query = 'CALL "SelectColumnIdentifiers"(?)'
+    elif name == 'getResourceFields':
+        query = 'CALL "SelectResourceFields"()'
     elif name == 'selectChangedAddressbooks':
         query = 'CALL "SelectChangedAddressbooks"(?,?,?)'
     elif name == 'selectChangedGroups':
@@ -1042,6 +1080,12 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
         query = 'CALL "UpdateAddressbook"(?)'
     elif name == 'updateGroup':
         query = 'CALL "UpdateGroup"(?)'
+    elif name == 'getLastUserSync':
+        query = 'CALL "GetLastUserSync"(?)'
+    elif name == 'getChangedCards':
+        query = 'CALL "SelectChangedCards"(?,?)'
+    elif name == 'updateUser':
+        query = 'CALL "UpdateUser"(?)'
     elif name == 'getSessionId':
         query = 'CALL SESSION_ID()'
 
@@ -1059,7 +1103,7 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
     elif name == 'mergePeople':
         query = 'CALL "MergePeople"(?,?,?,?,?)'
     elif name == 'mergeGroup':
-        query = 'CALL "MergeGroup"(?,?,?,?,?,?)'
+        query = 'CALL "MergeGroup"(?,?,?,?,?)'
     elif name == 'mergeConnection':
         query = 'CALL "MergeConnection"(?,?,?,?,?,?)'
     elif name == 'mergePeopleData':

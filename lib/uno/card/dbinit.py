@@ -366,11 +366,8 @@ def getStaticTables():
     tables = ('Tables',
               'Columns',
               'TableColumn',
-              'Properties',
-              'Parameters',
-              'Types',
-              'PropertyParameter',
-              'PropertyType')
+              'Resources',
+              'Properties')
     return tables
 
 def getQueries():
@@ -379,6 +376,7 @@ def getQueries():
             ('createInsertAddressbook', None),
             ('createUpdateAddressbookName', None),
             ('createMergeCard', None),
+            ('createMergeGroup', None),
             ('createDeleteCard', None),
             ('createUpdateUser', None),
             ('createGetLastUserSync', None),
@@ -389,6 +387,8 @@ def getQueries():
             ('insertSuperAdressbook', None),
             ('insertSuperGroup', None),
             ('createSelectAddressbookColumns', None),
+            ('createSelectColumnIdentifiers', None),
+            ('createSelectResourceFields', None),
             ('createSelectCardGroup', None),
             ('createInsertGroup', None),
             ('createMergeCardValue', None),
