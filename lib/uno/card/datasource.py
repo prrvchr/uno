@@ -68,7 +68,8 @@ class DataSource(unohelper.Base):
         self._users = {}
         self._listener = EventListener(self)
         self._database = DataBase(ctx)
-        self._provider = Provider(ctx)
+        paths, maps, types, tmps, fields = self._database.getDataBaseMetaData('metadata', 'item')
+        self._provider = Provider(ctx, paths, maps, types, tmps, fields)
         self._replicator = Replicator(ctx, self._database, self._provider, self._users)
         listener = TerminateListener(self._replicator)
         getDesktop(ctx).addTerminateListener(listener)
