@@ -91,8 +91,9 @@ from .dbinit import getTables
 from .dbinit import getViews
 
 from collections import OrderedDict
-import traceback
 from time import sleep
+import json
+import traceback
 
 
 class DataBase(unohelper.Base):
@@ -156,15 +157,18 @@ class DataBase(unohelper.Base):
 
     def _getAddressbookColumns(self, connection):
         columns = OrderedDict()
-        call = getDataSourceCall(self._ctx, connection, 'getAddressbookColumns')
+        call = getDataSourceCall(self._ctx, connection, 'getColumns')
         result = call.executeQuery()
         while result.next():
-            row = getRowDict(result)
-            view = row.get("ViewName")
+            index = result.getInt(1)
+            name = result.getString(2)
+            view = result.getString(3)
+            print("DataBase._getAddressbookColumns() Index: %s - Name: %s - View: %s" % (index, name, view))
             if view is not None:
                 if view not in columns:
                     columns[view] = OrderedDict()
-                columns[view][row.get("ColumnName")] = row.get("ColumnId")
+                columns[view][name] = index
+        result.close()
         call.close()
         return columns
 
@@ -232,28 +236,89 @@ class DataBase(unohelper.Base):
         call.close()
         return user
 
-    def getDataBaseMetaData(self, tag):
-        identifiers = self._getColumnIdentifiers(tag)
-        fields = self._getResourceFields()
-        return identifiers, fields
+    def getDataBaseMetaData(self, tag, sep):
+        try:
+            paths = self._getPaths(tag, sep)
+            maps = self._getMaps(tag, sep)
+            types = self._getTypes(tag, sep)
+            tmps = self._getTmps(tag, sep)
+            fields = self._getFields()
+        except Exception as e:
+            msg = "Error: %s" % traceback.print_exc()
+            print(msg)
+        return paths, maps, types, tmps, fields
 
-    def _getColumnIdentifiers(self, tag):
-        identifiers = {}
-        call = self._getCall('getColumnIdentifiers')
-        call.setString(1, tag)
+    def getColumnIndexes(self):
+        indexes = {}
+        call = self._getCall('getColumns')
         result = call.executeQuery()
         while result.next():
-            identifiers[result.getString(1)] = result.getInt(2)
+            index = result.getInt(1)
+            name = result.getString(2)
+            indexes[name] = index
         result.close()
         call.close()
-        return identifiers
+        return indexes
 
-    def _getResourceFields(self):
-        fields = {}
-        call = self._getCall('getResourceFields')
+    def _getPaths(self, tag, sep):
+        paths = {}
+        call = self._getCall('getPaths')
+        call.setString(1, tag)
+        call.setString(2, sep)
         result = call.executeQuery()
         while result.next():
-            fields[result.getString(1)] = result.getString(2)
+            paths[result.getString(1)] = result.getString(2)
+        result.close()
+        call.close()
+        return paths
+
+    def _getMaps(self, tag, sep):
+        paths = ()
+        call = self._getCall('getMaps')
+        call.setString(1, tag)
+        call.setString(2, sep)
+        result = call.executeQuery()
+        if result.next():
+            paths = result.getArray(1).getArray(None)
+        result.close()
+        call.close()
+        return paths
+
+    def _getTypes(self, tag, sep):
+        types = {}
+        call = self._getCall('getTypes')
+        call.setString(1, tag)
+        call.setString(2, sep)
+        result = call.executeQuery()
+        while result.next():
+            maps = {}
+            path = result.getString(1)
+            for map in result.getArray(2).getArray(None):
+                print("DataBase._getTypes() Map: '%s'" % map)
+                maps.update(json.loads(map))
+            types[path] = maps
+        result.close()
+        call.close()
+        return types
+
+    def _getTmps(self, tag, sep):
+        tmps = ()
+        call = self._getCall('getTmps')
+        call.setString(1, tag)
+        call.setString(2, sep)
+        result = call.executeQuery()
+        if result.next():
+            tmps = result.getArray(1).getArray(None)
+        result.close()
+        call.close()
+        return tmps
+
+    def _getFields(self):
+        fields = ''
+        call = self._getCall('getFields')
+        result = call.executeQuery()
+        if result.next():
+            fields = result.getString(1)
         result.close()
         call.close()
         return fields
@@ -486,6 +551,15 @@ class DataBase(unohelper.Base):
         result.close()
         call.close()
 
+    def getGroups(self, aid):
+        call = self._getCall('getGroups')
+        call.setInt(1, aid)
+        result = call.executeQuery()
+        while result.next():
+            yield result.getInt(1), result.getString(2)
+        result.close()
+        call.close()
+
     def mergeCardValue(self, iterator):
         count = 0
         self._setBatchModeOn()
@@ -509,6 +583,7 @@ class DataBase(unohelper.Base):
         call = self._getCall('mergeGroup')
         call.setString(1, aid)
         for gid, deleted, name, timestamp in iterator:
+            print("DataBase.mergeGroup() GID: %s - Name: %s - Deleted: %s" % (gid, name, deleted))
             call.setString(2, gid)
             call.setBoolean(3, deleted)
             call.setString(4, name)
@@ -521,6 +596,26 @@ class DataBase(unohelper.Base):
         self.Connection.commit()
         self._setBatchModeOff()
         return count
+
+    def mergeGroupData(self, gid, timestamp, iterator):
+        print("Provider.mergeGroupData() 1")
+        count = 0
+        self._setBatchModeOn()
+        call = self._getCall('mergeGroupMembers')
+        call.setInt(1, gid)
+        call.setTimestamp(2, timestamp)
+        for members in iterator:
+            call.setArray(3, Array('VARCHAR', members))
+            call.addBatch()
+            count += 1
+        if count:
+            call.executeBatch()
+        call.close()
+        self.Connection.commit()
+        self._setBatchModeOff()
+        return count
+
+
 
     def deleteCard(self, aid, urls):
         call = self._getCall('deleteCard')

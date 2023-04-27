@@ -89,11 +89,21 @@ def getSqlQuery(ctx, name, format=None):
         c1 = '"Property" INTEGER NOT NULL PRIMARY KEY'
         c2 = '"Resource" INTEGER NOT NULL'
         c3 = '"Path" VARCHAR(100) NOT NULL'
-        c4 = '"Name" VARCHAR(100) NOT NULL'
-        k1 = 'CONSTRAINT "ForeignTableResources" FOREIGN KEY("Resource") REFERENCES '
+        c4 = '"Name" VARCHAR(100) DEFAULT NULL'
+        k1 = 'CONSTRAINT "ForeignPropertiesResources" FOREIGN KEY("Resource") REFERENCES '
         k1 += '"Resources"("Resource") ON DELETE CASCADE ON UPDATE CASCADE'
         c = (c1, c2, c3, c4, k1)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "Properties"(%s)' % ','.join(c)
+
+    elif name == 'createTableTypes':
+        c1 = '"Type" INTEGER NOT NULL PRIMARY KEY'
+        c2 = '"Property" INTEGER NOT NULL'
+        c3 = '"Path" VARCHAR(100) NOT NULL'
+        c4 = '"Name" VARCHAR(100) NOT NULL'
+        k1 = 'CONSTRAINT "ForeignTypesProperties" FOREIGN KEY("Property") REFERENCES '
+        k1 += '"Properties"("Property") ON DELETE CASCADE ON UPDATE CASCADE'
+        c = (c1, c2, c3, c4, k1)
+        query = 'CREATE TEXT TABLE IF NOT EXISTS "Types"(%s)' % ','.join(c)
 
     elif name == 'setTableSource':
         query = 'SET TABLE "%s" SOURCE "%s"' % (format, g_csv % format)
@@ -748,51 +758,123 @@ CREATE PROCEDURE "UpdateUser"(IN LAST TIMESTAMP(6) WITH TIME ZONE)
     UPDATE "Users" SET "Created"=LAST WHERE "User"=0;
   END"""
 
-    elif name == 'createSelectAddressbookColumns':
+    elif name == 'createSelectColumns':
         query = """\
-CREATE PROCEDURE "SelectAddressbookColumns"()
-  SPECIFIC "SelectAddressbookColumns_1"
+CREATE PROCEDURE "SelectColumns"()
+  SPECIFIC "SelectColumns_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
-    DECLARE RSLT CURSOR WITH RETURN FOR 
-      SELECT P."Property" AS "ColumnId", 
-        P."Name" AS "ColumnName", 
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT ROWNUM() AS "ColumnId", 
+        COALESCE(T."Name",'') || P."Name" AS "ColumnName", 
         R."View" AS "ViewName" 
       FROM "Properties" AS P
       JOIN "Resources" AS R ON P."Resource"=R."Resource"
+      LEFT JOIN "Types" AS T ON P."Property"=T."Property"
+      WHERE P."Name" IS NOT NULL
+      ORDER BY R."Resource", P."Property", T."Type"
       FOR READ ONLY;
-    OPEN RSLT;
+    OPEN Rslt;
   END"""
 
-    elif name == 'createSelectColumnIdentifiers':
+    elif name == 'createSelectPaths':
         query = """\
-CREATE PROCEDURE "SelectColumnIdentifiers"(IN TAG VARCHAR(20))
-  SPECIFIC "SelectColumnIdentifiers_1"
+CREATE PROCEDURE "SelectPaths"(IN Tag VARCHAR(20),
+                               IN Sep CHAR)
+  SPECIFIC "SelectPaths_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
-    DECLARE RSLT CURSOR WITH RETURN FOR 
-      SELECT CONCAT_WS(TAG, R."Path", R."Name", P."Path"),
-        P."Property"
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path"),
+        P."Name"
       FROM "Properties" AS P
-      JOIN "Resources" AS R ON P."Resource"=R."Resource"
+      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource"
+      LEFT JOIN "Types" AS T ON P."Property"=T."Property"
+      WHERE T."Property" IS NULL AND P."Name" IS NOT NULL 
       FOR READ ONLY;
-    OPEN RSLT;
+    OPEN Rslt;
   END"""
 
-    elif name == 'createSelectResourceFields':
+    elif name == 'createSelectTypes':
         query = """\
-CREATE PROCEDURE "SelectResourceFields"()
-  SPECIFIC "SelectResourceFields_1"
+CREATE PROCEDURE "SelectTypes"(IN Tag VARCHAR(20),
+                               IN Sep CHAR)
+  SPECIFIC "SelectTypes_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
-    DECLARE RSLT CURSOR WITH RETURN FOR 
-      SELECT "Path", GROUP_CONCAT("Name" ORDER BY "Resource" SEPARATOR ',') 
-      FROM "Resources" GROUP BY "Path"
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path") AS "Path",
+        ARRAY_AGG(JSON_OBJECT(T."Path": T."Name" || P."Name") ORDER BY T."Type") AS "Types"
+      FROM "Properties" AS P 
+      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
+      INNER JOIN "Types" AS T ON P."Property"=T."Property" 
+      GROUP BY R."Path", R."Name", P."Path"
       FOR READ ONLY;
-    OPEN RSLT;
+    OPEN Rslt;
+  END"""
+
+    elif name == 'createSelectMaps':
+        query = """\
+CREATE PROCEDURE "SelectMaps"(IN Tag VARCHAR(20),
+                              IN Sep CHAR)
+  SPECIFIC "SelectMaps_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT ARRAY_AGG(CONCAT(CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name"), Sep, Tag) ORDER BY R."Resource", P."Property", T."Type")
+      FROM "Properties" AS P 
+      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
+      INNER JOIN "Types" AS T ON P."Property"=T."Property" 
+      FOR READ ONLY;
+    OPEN Rslt;
+  END"""
+
+    elif name == 'createSelectTmps':
+        query = """\
+CREATE PROCEDURE "SelectTmps"(IN Tag VARCHAR(20),
+                              IN Sep CHAR)
+  SPECIFIC "SelectTmps_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT ARRAY_AGG(CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path") ORDER BY R."Resource", P."Property")
+      FROM "Properties" AS P 
+      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
+      WHERE P."Name" IS NULL 
+      FOR READ ONLY;
+    OPEN Rslt;
+  END"""
+
+    elif name == 'createSelectFields':
+        query = """\
+CREATE PROCEDURE "SelectFields"()
+  SPECIFIC "SelectFields_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT GROUP_CONCAT("Name" ORDER BY "Resource" SEPARATOR ',') 
+      FROM "Resources"
+      FOR READ ONLY;
+    OPEN Rslt;
+  END"""
+
+    elif name == 'createSelectGroups':
+        query = """\
+CREATE PROCEDURE "SelectGroups"(IN Aid Integer)
+  SPECIFIC "SelectGroups_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT "Group", "Uri" FROM "Groups" WHERE "Addressbook"=Aid ORDER BY "Group" 
+      FOR READ ONLY;
+    OPEN Rslt;
   END"""
 
     elif name == 'createMergeGroup':
@@ -843,6 +925,31 @@ CREATE PROCEDURE "SelectAddressbookColumns"()
       FOR READ ONLY;
     OPEN RSLT;
   END"""
+
+    elif name == 'createMergeGroupMembers':
+        query = """\
+CREATE PROCEDURE "MergeGroupMembers"(IN Gid INTEGER,
+                                     DateTime TIMESTAMP(6),
+                                     IN Members VARCHAR(100) ARRAY)
+  SPECIFIC "MergeGroupMembers_1"
+  MODIFIES SQL DATA
+  BEGIN ATOMIC
+    DECLARE Index INTEGER DEFAULT 1;
+    DECLARE Cid INTEGER DEFAULT 1;
+    DELETE FROM "GroupCards" WHERE "Group"=Gid; 
+    WHILE Index <= CARDINALITY(Members) DO 
+      SELECT "Card" INTO Cid FROM "Cards" WHERE "Uri"=Members[Index];
+      IF Cid IS NOT NULL THEN
+        MERGE INTO "GroupCards" USING (VALUES(Gid,Cid,DateTime))
+          AS vals(x,y,z) ON "Group"=vals.x AND "Card"=vals.y
+            WHEN MATCHED THEN UPDATE SET "Modified"=vals.z
+            WHEN NOT MATCHED THEN INSERT ("Group","Card","Modified")
+              VALUES vals.x,vals.y,vals.z;
+      END IF;
+      SET Index = Index + 1;
+    END WHILE;
+  END"""
+
 
     elif name == 'createMergeCardValue':
         query = """\
@@ -1060,14 +1167,24 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
         query = 'CALL "MergeCard"(?,?,?,?,?)'
     elif name == 'mergeCardValue':
         query = 'CALL "MergeCardValue"(?,?,?)'
+    elif name == 'mergeGroupMembers':
+        query = 'CALL "MergeGroupMembers"(?,?,?)'
     elif name == 'deleteCard':
         query = 'CALL "DeleteCard"(?,?)'
-    elif name == 'getAddressbookColumns':
-        query = 'CALL "SelectAddressbookColumns"()'
-    elif name == 'getColumnIdentifiers':
-        query = 'CALL "SelectColumnIdentifiers"(?)'
-    elif name == 'getResourceFields':
-        query = 'CALL "SelectResourceFields"()'
+    elif name == 'getColumns':
+        query = 'CALL "SelectColumns"()'
+    elif name == 'getPaths':
+        query = 'CALL "SelectPaths"(?,?)'
+    elif name == 'getTypes':
+        query = 'CALL "SelectTypes"(?,?)'
+    elif name == 'getMaps':
+        query = 'CALL "SelectMaps"(?,?)'
+    elif name == 'getTmps':
+        query = 'CALL "SelectTmps"(?,?)'
+    elif name == 'getFields':
+        query = 'CALL "SelectFields"()'
+    elif name == 'getGroups':
+        query = 'CALL "SelectGroups"(?)'
     elif name == 'selectChangedAddressbooks':
         query = 'CALL "SelectChangedAddressbooks"(?,?,?)'
     elif name == 'selectChangedGroups':

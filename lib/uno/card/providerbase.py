@@ -59,17 +59,18 @@ class ProviderBase(unohelper.Base):
     def initAddressbooks(self, database, user):
         raise NotImplementedError
 
-    def firstPullCard(self, database, user, addressbook):
+    def firstPullCard(self, database, user, addressbook, pages, count):
         raise NotImplementedError
 
-    def pullCard(self, database, user, addressbook, dltd, mdfd):
+    def pullCard(self, database, user, addressbook, pages, count):
         raise NotImplementedError
 
     def parseCard(self, database):
         raise NotImplementedError
 
-    def syncGroups(self, database):
-        raise NotImplementedError
+    # Can be overwritten method
+    def syncGroups(self, database, user, addressbook, pages, count):
+        pass
 
 def getSqlException(ctx, source, state, code, method, *args):
     logger = getLogger(ctx, g_errorlog, g_basename)
