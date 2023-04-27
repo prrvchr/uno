@@ -102,9 +102,9 @@ class Replicator(unohelper.Base):
                     total = dltd + mdfd
                     if total > 0:
                         print("replicator.run()4 synchronize started CardSync.jar")
-                        self._provider.parseCard(self._database.Connection)
+                        self._provider.parseCard(self._database)
                         print("replicator.run()5 synchronize ended CardSync.jar")
-                        self._database.syncGroups()
+                        self._provider.syncGroups(self._database)
                     self._database.dispose()
                     logger.logprb(INFO, 'Replicator', '_replicate()', 101, total, mdfd, dltd)
                     print("replicator.run()6 synchronize ended query=%s modified=%s deleted=%s *******************************************" % (total, mdfd, dltd))

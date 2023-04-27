@@ -43,7 +43,6 @@ from .configuration import g_compact
 from .database import DataBase
 
 from .user import User
-from .user import getUserUri
 
 from .addressbook import AddressBook
 from .provider import Provider
@@ -89,7 +88,7 @@ class DataSource(unohelper.Base):
     def getConnection(self, scheme, server, account, password):
         try: 
             print("DataSource.getConnection () 1")
-            uri = getUserUri(server, account)
+            uri = self._provider.getUserUri(server, account)
             if uri in self._maps:
                 name = self._maps.get(uri)
                 user = self._users.get(name)

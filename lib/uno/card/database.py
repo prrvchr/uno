@@ -414,10 +414,11 @@ class DataBase(unohelper.Base):
         self._setBatchModeOn()
         call = self._getCall('mergeCard')
         call.setInt(1, aid)
-        for url, etag, data in iterator:
+        for url, etag, deleted, data in iterator:
             call.setString(2, url)
             call.setString(3, etag)
-            call.setString(4, data)
+            call.setBoolean(4, deleted)
+            call.setString(5, data)
             call.addBatch()
             count += 1
         if count:
