@@ -70,9 +70,9 @@ def getSqlQuery(ctx, name, format=None):
         c8 = '"ForeignTable" INTEGER DEFAULT NULL'
         c9 = '"ForeignColumn" INTEGER DEFAULT NULL'
         k1 = 'PRIMARY KEY("Table","Column")'
-        k2 = 'CONSTRAINT "ForeignTableColumnTable" FOREIGN KEY("Table") REFERENCES '
+        k2 = 'CONSTRAINT "ForeignTablesTable" FOREIGN KEY("Table") REFERENCES '
         k2 += '"Tables"("Table") ON DELETE CASCADE ON UPDATE CASCADE'
-        k3 = 'CONSTRAINT "ForeignTableColumnColumn" FOREIGN KEY("Column") REFERENCES '
+        k3 = 'CONSTRAINT "ForeignColumnsColumn" FOREIGN KEY("Column") REFERENCES '
         k3 += '"Columns"("Column") ON DELETE CASCADE ON UPDATE CASCADE'
         c = (c1, c2, c3, c4, c5, c6, c7, c8, c9, k1, k2, k3)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "TableColumn"(%s)' % ','.join(c)
@@ -90,20 +90,27 @@ def getSqlQuery(ctx, name, format=None):
         c2 = '"Resource" INTEGER NOT NULL'
         c3 = '"Path" VARCHAR(100) NOT NULL'
         c4 = '"Name" VARCHAR(100) DEFAULT NULL'
-        k1 = 'CONSTRAINT "ForeignPropertiesResources" FOREIGN KEY("Resource") REFERENCES '
+        k1 = 'CONSTRAINT "ForeignResourcesResource" FOREIGN KEY("Resource") REFERENCES '
         k1 += '"Resources"("Resource") ON DELETE CASCADE ON UPDATE CASCADE'
         c = (c1, c2, c3, c4, k1)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "Properties"(%s)' % ','.join(c)
 
     elif name == 'createTableTypes':
         c1 = '"Type" INTEGER NOT NULL PRIMARY KEY'
-        c2 = '"Property" INTEGER NOT NULL'
-        c3 = '"Path" VARCHAR(100) NOT NULL'
-        c4 = '"Name" VARCHAR(100) NOT NULL'
-        k1 = 'CONSTRAINT "ForeignTypesProperties" FOREIGN KEY("Property") REFERENCES '
-        k1 += '"Properties"("Property") ON DELETE CASCADE ON UPDATE CASCADE'
-        c = (c1, c2, c3, c4, k1)
+        c2 = '"Path" VARCHAR(100) NOT NULL'
+        c3 = '"Name" VARCHAR(100) NOT NULL'
+        c = (c1, c2, c3)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "Types"(%s)' % ','.join(c)
+
+    elif name == 'createTablePropertyType':
+        c1 = '"Property" INTEGER NOT NULL'
+        c2 = '"Type" INTEGER NOT NULL'
+        k1 = 'CONSTRAINT "ForeignPropertiesProperty" FOREIGN KEY("Property") REFERENCES '
+        k1 += '"Properties"("Property") ON DELETE CASCADE ON UPDATE CASCADE'
+        k2 = 'CONSTRAINT "ForeignTypesType" FOREIGN KEY("Type") REFERENCES '
+        k2 += '"Types"("Type") ON DELETE CASCADE ON UPDATE CASCADE'
+        c = (c1, c2, k1, k2)
+        query = 'CREATE TEXT TABLE IF NOT EXISTS "PropertyType"(%s)' % ','.join(c)
 
     elif name == 'setTableSource':
         query = 'SET TABLE "%s" SOURCE "%s"' % (format, g_csv % format)
@@ -758,6 +765,7 @@ CREATE PROCEDURE "UpdateUser"(IN LAST TIMESTAMP(6) WITH TIME ZONE)
     UPDATE "Users" SET "Created"=LAST WHERE "User"=0;
   END"""
 
+    # The getColumns query allows to obtain all the columns available from parser properties.
     elif name == 'createSelectColumns':
         query = """\
 CREATE PROCEDURE "SelectColumns"()
@@ -769,83 +777,89 @@ CREATE PROCEDURE "SelectColumns"()
       SELECT ROWNUM() AS "ColumnId", 
         COALESCE(T."Name",'') || P."Name" AS "ColumnName", 
         R."View" AS "ViewName" 
-      FROM "Properties" AS P
-      JOIN "Resources" AS R ON P."Resource"=R."Resource"
-      LEFT JOIN "Types" AS T ON P."Property"=T."Property"
-      WHERE P."Name" IS NOT NULL
-      ORDER BY R."Resource", P."Property", T."Type"
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
+      LEFT JOIN "Types" AS T ON PT."Type"=T."Type" 
+      WHERE P."Name" IS NOT NULL 
+      ORDER BY R."Resource", P."Property", T."Type" 
       FOR READ ONLY;
     OPEN Rslt;
   END"""
 
+    # The getPaths query allows to obtain all the JSON paths of the simple properties (untyped)
     elif name == 'createSelectPaths':
         query = """\
-CREATE PROCEDURE "SelectPaths"(IN Tag VARCHAR(20),
-                               IN Sep CHAR)
+CREATE PROCEDURE "SelectPaths"()
   SPECIFIC "SelectPaths_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path"),
-        P."Name"
-      FROM "Properties" AS P
-      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource"
-      LEFT JOIN "Types" AS T ON P."Property"=T."Property"
-      WHERE T."Property" IS NULL AND P."Name" IS NOT NULL 
+      SELECT R."Path", R."Name", P."Path", P."Name" 
+      FROM "Resources" AS R
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource"
+      LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property"
+      WHERE PT."Property" IS NULL AND P."Name" IS NOT NULL 
       FOR READ ONLY;
     OPEN Rslt;
   END"""
 
+    # The getTypes query allows to obtain the right label (column) for typed properties
     elif name == 'createSelectTypes':
         query = """\
-CREATE PROCEDURE "SelectTypes"(IN Tag VARCHAR(20),
-                               IN Sep CHAR)
+CREATE PROCEDURE "SelectTypes"()
   SPECIFIC "SelectTypes_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path") AS "Path",
-        ARRAY_AGG(JSON_OBJECT(T."Path": T."Name" || P."Name") ORDER BY T."Type") AS "Types"
-      FROM "Properties" AS P 
-      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
-      INNER JOIN "Types" AS T ON P."Property"=T."Property" 
-      GROUP BY R."Path", R."Name", P."Path"
+      SELECT R."Path", R."Name", P."Path", 
+      ARRAY_AGG(JSON_OBJECT(T."Path" || P2."Path": T."Name" || P2."Name")) 
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      INNER JOIN "Resources" AS R2 ON R."Resource"=R2."Resource" 
+      INNER JOIN "Properties" AS P2 ON R2."Resource"=P2."Resource" 
+      INNER JOIN "PropertyType" AS PT ON P2."Property"=PT."Property" 
+      INNER JOIN "Types" AS T ON PT."Type"=T."Type" 
+      WHERE P."Name" IS NULL AND P2."Name" IS NOT NULL 
+      GROUP BY R."Path", R."Name", P."Path" 
       FOR READ ONLY;
     OPEN Rslt;
   END"""
 
-    elif name == 'createSelectMaps':
-        query = """\
-CREATE PROCEDURE "SelectMaps"(IN Tag VARCHAR(20),
-                              IN Sep CHAR)
-  SPECIFIC "SelectMaps_1"
-  READS SQL DATA
-  DYNAMIC RESULT SETS 1
-  BEGIN ATOMIC
-    DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT ARRAY_AGG(CONCAT(CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name"), Sep, Tag) ORDER BY R."Resource", P."Property", T."Type")
-      FROM "Properties" AS P 
-      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
-      INNER JOIN "Types" AS T ON P."Property"=T."Property" 
-      FOR READ ONLY;
-    OPEN Rslt;
-  END"""
-
+    # The getTmps query allows to get the path for the typed properties
     elif name == 'createSelectTmps':
         query = """\
-CREATE PROCEDURE "SelectTmps"(IN Tag VARCHAR(20),
-                              IN Sep CHAR)
+CREATE PROCEDURE "SelectTmps"()
   SPECIFIC "SelectTmps_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT ARRAY_AGG(CONCAT_WS(Sep || Tag || Sep, R."Path", R."Name", P."Path") ORDER BY R."Resource", P."Property")
-      FROM "Properties" AS P 
-      INNER JOIN "Resources" AS R ON P."Resource"=R."Resource" 
-      WHERE P."Name" IS NULL 
+      SELECT R."Path", R."Name", P."Path"
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      INNER JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
+      FOR READ ONLY;
+    OPEN Rslt;
+  END"""
+
+    # The getMaps query allows to start and stop buffers (tmp var) when parsing typed properties
+    elif name == 'createSelectMaps':
+        query = """\
+CREATE PROCEDURE "SelectMaps"()
+  SPECIFIC "SelectMaps_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT R."Path", R."Name", 
+        ARRAY_AGG(DISTINCT P."Path") 
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      INNER JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
+      GROUP BY R."Path", R."Name"
       FOR READ ONLY;
     OPEN Rslt;
   END"""
@@ -858,9 +872,7 @@ CREATE PROCEDURE "SelectFields"()
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT GROUP_CONCAT("Name" ORDER BY "Resource" SEPARATOR ',') 
-      FROM "Resources"
-      FOR READ ONLY;
+      SELECT "Name" FROM "Resources" ORDER BY "Resource" FOR READ ONLY;
     OPEN Rslt;
   END"""
 
@@ -1174,13 +1186,13 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
     elif name == 'getColumns':
         query = 'CALL "SelectColumns"()'
     elif name == 'getPaths':
-        query = 'CALL "SelectPaths"(?,?)'
+        query = 'CALL "SelectPaths"()'
     elif name == 'getTypes':
-        query = 'CALL "SelectTypes"(?,?)'
+        query = 'CALL "SelectTypes"()'
     elif name == 'getMaps':
-        query = 'CALL "SelectMaps"(?,?)'
+        query = 'CALL "SelectMaps"()'
     elif name == 'getTmps':
-        query = 'CALL "SelectTmps"(?,?)'
+        query = 'CALL "SelectTmps"()'
     elif name == 'getFields':
         query = 'CALL "SelectFields"()'
     elif name == 'getGroups':

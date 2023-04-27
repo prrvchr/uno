@@ -368,7 +368,8 @@ def getStaticTables():
               'TableColumn',
               'Resources',
               'Properties',
-              'Types')
+              'Types',
+              'PropertyType')
     return tables
 
 def getQueries():

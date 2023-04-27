@@ -236,13 +236,13 @@ class DataBase(unohelper.Base):
         call.close()
         return user
 
-    def getDataBaseMetaData(self, tag, sep):
+    def getDataBaseMetaData(self, default, tag, dot='.', sep=','):
         try:
-            paths = self._getPaths(tag, sep)
-            maps = self._getMaps(tag, sep)
-            types = self._getTypes(tag, sep)
-            tmps = self._getTmps(tag, sep)
-            fields = self._getFields()
+            paths = self._getPaths(tag, dot)
+            maps = self._getMaps(tag, dot)
+            types = self._getTypes(tag, dot)
+            tmps = self._getTmps(tag, dot)
+            fields = self._getFields(default, sep)
         except Exception as e:
             msg = "Error: %s" % traceback.print_exc()
             print(msg)
@@ -260,68 +260,58 @@ class DataBase(unohelper.Base):
         call.close()
         return indexes
 
-    def _getPaths(self, tag, sep):
-        paths = {}
+    def _getPaths(self, tag, dot):
+        sep = dot + tag + dot
         call = self._getCall('getPaths')
-        call.setString(1, tag)
-        call.setString(2, sep)
         result = call.executeQuery()
         while result.next():
-            paths[result.getString(1)] = result.getString(2)
+            key = result.getString(1) + sep + result.getString(2) + sep + result.getString(3)
+            yield key, result.getString(4)
         result.close()
         call.close()
-        return paths
 
-    def _getMaps(self, tag, sep):
-        paths = ()
-        call = self._getCall('getMaps')
-        call.setString(1, tag)
-        call.setString(2, sep)
-        result = call.executeQuery()
-        if result.next():
-            paths = result.getArray(1).getArray(None)
-        result.close()
-        call.close()
-        return paths
-
-    def _getTypes(self, tag, sep):
-        types = {}
+    def _getTypes(self, tag, dot):
+        sep = dot + tag + dot
         call = self._getCall('getTypes')
-        call.setString(1, tag)
-        call.setString(2, sep)
         result = call.executeQuery()
         while result.next():
+            key = result.getString(1) + sep + result.getString(2) + sep + result.getString(3)
             maps = {}
-            path = result.getString(1)
-            for map in result.getArray(2).getArray(None):
-                print("DataBase._getTypes() Map: '%s'" % map)
+            for map in result.getArray(4).getArray(None):
                 maps.update(json.loads(map))
-            types[path] = maps
+            print("DataBase._getTypes() key: '%s' - Dict: %s" % (key, maps))
+            yield key, maps
         result.close()
         call.close()
-        return types
 
-    def _getTmps(self, tag, sep):
-        tmps = ()
-        call = self._getCall('getTmps')
-        call.setString(1, tag)
-        call.setString(2, sep)
+    def _getMaps(self, tag, dot):
+        sep = dot + tag + dot
+        call = self._getCall('getMaps')
         result = call.executeQuery()
-        if result.next():
-            tmps = result.getArray(1).getArray(None)
+        while result.next():
+            key = result.getString(1) + sep + result.getString(2) + dot + tag
+            yield key, result.getArray(3).getArray(None)
         result.close()
         call.close()
-        return tmps
 
-    def _getFields(self):
-        fields = ''
+    def _getTmps(self, tag, dot):
+        sep = dot + tag + dot
+        call = self._getCall('getTmps')
+        result = call.executeQuery()
+        while result.next():
+            yield result.getString(1) + sep + result.getString(2) + sep + result.getString(3)
+        result.close()
+        call.close()
+
+    def _getFields(self, defaults, sep):
+        fields = defaults.split(sep)
         call = self._getCall('getFields')
         result = call.executeQuery()
-        if result.next():
-            fields = result.getString(1)
+        while result.next():
+            fields.append(result.getString(1))
         result.close()
         call.close()
-        return fields
+        yield sep.join(fields)
 
 # Procedures called by the User
     def getUserFields(self):
