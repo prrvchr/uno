@@ -35,16 +35,14 @@ from com.sun.star.ucb.ConnectionMode import ONLINE
 
 from .addressbook import AddressBooks
 
-from .provider import Provider
+from .provider import getException
 
-from .unotool import getConnectionMode
-from .providerbase import getException
+from ..dbconfig import g_user
+from ..dbconfig import g_schema
 
-from .oauth2 import getRequest
-from .oauth2 import g_oauth2
-
-from .dbconfig import g_user
-from .dbconfig import g_schema
+from ..unotool import getConnectionMode
+from ..oauth2 import getRequest
+from ..oauth2 import g_oauth2
 
 import traceback
 
