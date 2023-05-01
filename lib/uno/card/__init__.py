@@ -55,4 +55,6 @@ from .unotool import getFileSequence
 from .unotool import getResourceLocation
 from .unotool import getSimpleFile
 from .unotool import getStringResource
+# FIXME Import necessary exclusively for vCardOOo
+from .unotool import getUrl
 

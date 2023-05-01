@@ -33,7 +33,7 @@ import unohelper
 from com.sun.star.logging.LogLevel import SEVERE
 
 from ..dbtool import getDateTimeFromString
-from ..dbtool import getSqlException
+from ..dbtool import getSqlException as getException
 
 from ..logger import getLogger
 
@@ -72,11 +72,11 @@ class Provider(unohelper.Base):
     def syncGroups(self, database, user, addressbook, pages, count):
         pass
 
-def getException(ctx, source, state, code, method, *args):
+def getSqlException(ctx, source, state, code, method, *args):
     logger = getLogger(ctx, g_errorlog, g_basename)
     state = logger.resolveString(state)
     msg = logger.resolveString(code, *args)
     logger.logp(SEVERE, g_basename, method, msg)
-    error = getSqlException(state, code, msg, source)
+    error = getException(state, code, msg, source)
     return error
 
