@@ -236,7 +236,7 @@ class DataBase(unohelper.Base):
         call.close()
         return user
 
-    def getDataBaseMetaData(self, default, tag, dot='.', sep=','):
+    def getMetaData(self, default, tag, dot='.', sep=','):
         try:
             paths = self._getPaths(tag, dot)
             maps = self._getMaps(tag, dot)

@@ -72,7 +72,7 @@ class ProviderBase(unohelper.Base):
     def syncGroups(self, database, user, addressbook, pages, count):
         pass
 
-def getSqlException(ctx, source, state, code, method, *args):
+def getException(ctx, source, state, code, method, *args):
     logger = getLogger(ctx, g_errorlog, g_basename)
     state = logger.resolveString(state)
     msg = logger.resolveString(code, *args)

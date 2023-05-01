@@ -54,8 +54,6 @@ from .listener import TerminateListener
 from .unotool import getDesktop
 from .unotool import getUrl
 
-from .dbtool import getSqlException
-
 from .configuration import g_scheme
 
 import traceback
@@ -68,8 +66,7 @@ class DataSource(unohelper.Base):
         self._users = {}
         self._listener = EventListener(self)
         self._database = DataBase(ctx)
-        paths, maps, types, tmps, fields = self._database.getDataBaseMetaData('metadata', 'item')
-        self._provider = Provider(ctx, paths, maps, types, tmps, fields)
+        self._provider = Provider(ctx, self._database)
         self._replicator = Replicator(ctx, self._database, self._provider, self._users)
         listener = TerminateListener(self._replicator)
         getDesktop(ctx).addTerminateListener(listener)

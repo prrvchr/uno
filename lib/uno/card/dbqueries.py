@@ -82,7 +82,8 @@ def getSqlQuery(ctx, name, format=None):
         c2 = '"Path" VARCHAR(100) NOT NULL'
         c3 = '"Name" VARCHAR(100) NOT NULL'
         c4 = '"View" VARCHAR(100) DEFAULT NULL'
-        c = (c1, c2, c3, c4)
+        c5 = '"Method" SMALLINT DEFAULT NULL'
+        c = (c1, c2, c3, c4, c5)
         query = 'CREATE TEXT TABLE IF NOT EXISTS "Resources"(%s)' % ','.join(c)
 
     elif name == 'createTableProperties':
@@ -551,6 +552,35 @@ CREATE PROCEDURE "UpdateAddressbookName"(IN AID INTEGER,
     UPDATE "Addressbooks" SET "Name"=NAME WHERE "Addressbook"=AID;
   END"""
 
+    elif name == 'createMergeCardData':
+        query = """\
+CREATE PROCEDURE "MergeCardData"(IN Labels VARCHAR(60) ARRAY,
+                                 IN DateTime TIMESTAMP(6),
+                                 IN Card INTEGER,
+                                 IN Prefix VARCHAR(20),
+                                 IN Label VARCHAR(20),
+                                 IN Suffixes VARCHAR(20) ARRAY,
+                                 IN Data VARCHAR(128))
+  SPECIFIC "MergeCardData_1"
+  MODIFIES SQL DATA
+  BEGIN ATOMIC
+    DECLARE Index INTEGER DEFAULT 1;
+    DECLARE ColumnId INTEGER DEFAULT 0;
+    DECLARE Suffix VARCHAR(20) DEFAULT '';
+    WHILE Index <= CARDINALITY(Suffixes) DO 
+      SET Suffix = Suffix || Suffixes[Index];
+      SET Index = Index + 1;
+    END WHILE;
+    SET ColumnId = POSITION_ARRAY(Prefix || Label || Suffix IN Labels);
+    IF ColumnId > 0 THEN
+      MERGE INTO "CardValues" USING (VALUES(Card,ColumnId,Data,DateTime)) 
+        AS vals(w,x,y,z) ON "CardValues"."Card"=vals.w AND "CardValues"."Column"=vals.x
+          WHEN MATCHED THEN UPDATE SET "Value"=vals.y, "Modified"=vals.z 
+          WHEN NOT MATCHED THEN INSERT ("Card","Column","Value","Created","Modified")
+             VALUES vals.w,vals.x,vals.y,vals.z,vals.z;
+    END IF;
+  END"""
+
     elif name == 'createMergeCard':
         query = """\
 CREATE PROCEDURE "MergeCard"(IN AID INTEGER,
@@ -729,7 +759,7 @@ CREATE PROCEDURE "SelectChangedCards"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      (SELECT U1."User",C1."Card",NULL AS "Data",'Deleted' AS "Query",C1."RowEnd" AS "Order"
+      (SELECT U1."User",C1."Card",'Deleted' AS "Query",NULL AS "Data",C1."RowEnd" AS "Order"
       FROM "Cards" FOR SYSTEM_TIME AS OF FIRST AS C1
       JOIN "Addressbooks" AS A ON C1."Addressbook"=A."Addressbook"
       JOIN "Users" AS U1 ON A."User"=U1."User"
@@ -737,7 +767,7 @@ CREATE PROCEDURE "SelectChangedCards"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
         ON C1."Card" = C2."Card"
       WHERE C2."Card" IS NULL)
       UNION
-      (SELECT U2."User",C2."Card",C2."Data",'Inserted' AS "Query",C2."RowStart" AS "Order"
+      (SELECT U2."User",C2."Card",'Inserted' AS "Query",C2."Data",C2."RowStart" AS "Order"
       FROM "Cards" FOR SYSTEM_TIME AS OF LAST AS C2
       JOIN "Addressbooks" AS A ON C2."Addressbook"=A."Addressbook"
       JOIN "Users" AS U2 ON A."User"=U2."User"
@@ -745,7 +775,7 @@ CREATE PROCEDURE "SelectChangedCards"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
         ON C2."Card"=C1."Card"
       WHERE C1."Card" IS NULL)
       UNION
-      (SELECT U3."User",C2."Card",C2."Data",'Updated' AS "Query",C1."RowEnd" AS "Order"
+      (SELECT U3."User",C2."Card",'Updated' AS "Query",C2."Data",C1."RowEnd" AS "Order"
       FROM "Cards" FOR SYSTEM_TIME AS OF LAST AS C2
       JOIN "Addressbooks" AS A ON C2."Addressbook"=A."Addressbook"
       JOIN "Users" AS U3 ON A."User"=U3."User"
@@ -763,6 +793,48 @@ CREATE PROCEDURE "UpdateUser"(IN LAST TIMESTAMP(6) WITH TIME ZONE)
   MODIFIES SQL DATA
   BEGIN ATOMIC
     UPDATE "Users" SET "Created"=LAST WHERE "User"=0;
+  END"""
+
+    elif name == 'createSelectCardProperties':
+        query = """\
+CREATE PROCEDURE "SelectCardProperties"()
+  SPECIFIC "SelectCardProperties_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE RSLT CURSOR WITH RETURN FOR
+      SELECT
+        R."Name" AS "PropertyName", 
+        R."Path" AS "PropertyGetter", 
+        R."View" IS NULL AS "IsGroup", 
+        PT."Property" IS NOT NULL AS "IsTyped",
+        ARRAY_AGG(DISTINCT JSON_OBJECT(P."Path": P."Name"))
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
+      GROUP BY R."Name", R."Path", "IsGroup", "IsTyped" 
+      FOR READ ONLY;
+    OPEN RSLT;
+  END"""
+
+    # The getColumnIds query allows to obtain all the columns available from parser properties.
+    elif name == 'createSelectColumnIds':
+        query = """\
+CREATE PROCEDURE "SelectColumnIds"()
+  SPECIFIC "SelectColumnIds_1"
+  READS SQL DATA
+  DYNAMIC RESULT SETS 1
+  BEGIN ATOMIC
+    DECLARE Rslt CURSOR WITH RETURN FOR 
+      SELECT ARRAY_AGG(R."Name" || P."Path" || COALESCE(T."Path",'') 
+                       ORDER BY R."Resource", P."Property", T."Type")
+      FROM "Resources" AS R 
+      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
+      LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
+      LEFT JOIN "Types" AS T ON PT."Type"=T."Type" 
+      WHERE P."Name" IS NOT NULL 
+      FOR READ ONLY;
+    OPEN Rslt;
   END"""
 
     # The getColumns query allows to obtain all the columns available from parser properties.
@@ -986,13 +1058,13 @@ CREATE PROCEDURE "SelectCardGroup"()
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      SELECT U."User",
-        ARRAY_AGG(G."Name") AS "Names",
-        ARRAY_AGG(G."Group") AS "Groups"
-      FROM "Users" AS U
-      INNER JOIN "Addressbooks" AS A ON U."User"=A."User"
-      INNER JOIN "Groups" AS G ON A."Addressbook"=G."Addressbook"
-      GROUP BY U."User"
+      SELECT U."User", 
+        ARRAY_AGG(JSON_OBJECT(G."Name": G."Group")) 
+      FROM "Users" AS U 
+      INNER JOIN "Addressbooks" AS A ON U."User"=A."User" 
+      INNER JOIN "Groups" AS G ON A."Addressbook"=G."Addressbook" 
+      WHERE U."User"!=0 
+      GROUP BY U."User" 
       FOR READ ONLY;
     OPEN RSLT;
   END"""
@@ -1012,17 +1084,13 @@ CREATE PROCEDURE "InsertGroup"(IN AID INTEGER,
 
     elif name == 'createMergeCardGroup':
         query = """\
-CREATE PROCEDURE "MergeCardGroup"(IN CID INTEGER,
-                                  IN GIDS INTEGER ARRAY)
+CREATE PROCEDURE "MergeCardGroup"(IN Cid INTEGER,
+                                  IN Gid INTEGER)
   SPECIFIC "MergeCardGroup_1"
   MODIFIES SQL DATA
   BEGIN ATOMIC
-    DECLARE INDEX INTEGER DEFAULT 1;
-    DELETE FROM "GroupCards" WHERE "Card"=CID;
-    WHILE INDEX <= CARDINALITY(GIDS) DO
-      INSERT INTO "GroupCards" ("Group","Card") VALUES (GIDS[INDEX],CID);
-      SET INDEX = INDEX + 1;
-    END WHILE;
+    DELETE FROM "GroupCards" WHERE "Card"=Cid;
+    INSERT INTO "GroupCards" ("Group","Card") VALUES (Gid,Cid);
   END"""
 
     elif name == 'createGetPeopleIndex':
@@ -1185,6 +1253,8 @@ CREATE PROCEDURE "MergeConnection"(IN "GroupPrefix" VARCHAR(50),
         query = 'CALL "DeleteCard"(?,?)'
     elif name == 'getColumns':
         query = 'CALL "SelectColumns"()'
+    elif name == 'getColumnIds':
+        query = 'CALL "SelectColumnIds"()'
     elif name == 'getPaths':
         query = 'CALL "SelectPaths"()'
     elif name == 'getTypes':

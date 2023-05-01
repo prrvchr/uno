@@ -390,6 +390,7 @@ def getQueries():
             ('insertSuperAdressbook', None),
             ('insertSuperGroup', None),
             ('createSelectColumns', None),
+            ('createSelectColumnIds', None),
             ('createSelectPaths', None),
             ('createSelectTypes', None),
             ('createSelectMaps', None),
@@ -399,8 +400,10 @@ def getQueries():
             ('createSelectCardGroup', None),
             ('createInsertGroup', None),
             ('createMergeCardValue', None),
+            ('createMergeCardData', None),
             ('createMergeCardGroup', None),
             ('createSelectChangedAddressbooks', None),
             ('createSelectChangedGroups', None),
             ('createUpdateAddressbook', None),
-            ('createUpdateGroup', None))
+            ('createUpdateGroup', None),
+            ('createSelectCardProperties', None))
