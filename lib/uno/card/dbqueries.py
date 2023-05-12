@@ -879,7 +879,7 @@ CREATE PROCEDURE "SelectPaths"()
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT R."Path", P."Path", P."Name"
+      SELECT R."Path", R."Name", P."Path", P."Name"
       FROM "Resources" AS R
       INNER JOIN "Properties" AS P ON R."Resource"=P."Resource"
       LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property"
