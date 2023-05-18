@@ -28,10 +28,6 @@
 """
 
 try:
-    print("Pythonpath.cffi 1 PY3")
-    from cffi import *
-    print("Pythonpath.cffi 2 PY3")
+    import _cffi_backend
 except:
-    from .cffi import FFI
-    from .cffi import CDefError, FFIError, VerificationError, VerificationMissing
-    from .cffi import PkgConfigError
+    from . import _cffi_backend
