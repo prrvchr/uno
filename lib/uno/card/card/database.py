@@ -247,7 +247,6 @@ class DataBase(unohelper.Base):
         call.close()
         return tuple(fields)
 
-
     def initAddressbooks(self, user):
         start = self._getLastAddressbookSync()
         stop = currentDateTimeInTZ()
@@ -575,8 +574,6 @@ class DataBase(unohelper.Base):
         self._setBatchModeOff()
         return count
 
-
-
     def deleteCard(self, urls):
         call = self._getCall('deleteCard')
         call.setArray(1, Array('VARCHAR', urls))
@@ -614,96 +611,7 @@ class DataBase(unohelper.Base):
         statement.execute(query)
         statement.close()
 
-
-
-
-
-
-
-    def getDefaultType(self):
-        default = {}
-        call = self._getCall('getDefaultType')
-        result = call.executeQuery()
-        default = getDictFromResult(result)
-        call.close()
-        return default
-
-    def getUpdatedGroups(self, user, prefix):
-        groups = None
-        call = self._getCall('selectUpdatedGroup')
-        call.setString(1, prefix)
-        call.setLong(2, user.People)
-        call.setString(3, user.Resource)
-        result = call.executeQuery()
-        groups = getKeyMapKeyMapFromResult(result)
-        call.close()
-        return groups
-
-    def updateSyncToken(self, user, token, data, timestamp):
-        value = data.getValue(token)
-        call = self._getBatchedCall('update%s' % token)
-        call.setString(1, value)
-        call.setTimestamp(2, timestamp)
-        call.setLong(3, user.People)
-        call.addBatch()
-        return KeyMap(**{token: value})
-
-    def mergePeople(self, user, resource, timestamp, deleted):
-        call = self._getBatchedCall('mergePeople')
-        call.setString(1, 'people/')
-        call.setString(2, resource)
-        call.setLong(3, user.Group)
-        call.setTimestamp(4, timestamp)
-        call.setBoolean(5, deleted)
-        call.addBatch()
-        return (0, 1) if deleted else (1, 0)
-
-    def mergePeopleData(self, table, resource, typename, label, value, timestamp):
-        format = {'Table': table, 'Type': typename}
-        call = self._getBatchedCall(table, 'mergePeopleData', format)
-        call.setString(1, 'people/')
-        call.setString(2, resource)
-        call.setString(3, label)
-        call.setString(4, value)
-        call.setTimestamp(5, timestamp)
-        if typename is not None:
-            call.setString(6, table)
-            call.setString(7, typename)
-        call.addBatch()
-        return 1
-
-    def mergeGroup1(self, user, resource, name, timestamp, deleted):
-        call = self._getBatchedCall('mergeGroup')
-        call.setString(1, 'contactGroups/')
-        call.setLong(2, user.People)
-        call.setString(3, resource)
-        call.setString(4, name)
-        call.setTimestamp(5, timestamp)
-        call.setBoolean(6, deleted)
-        call.addBatch()
-        return (0, 1) if deleted else (1, 0)
-
-    def mergeConnection(self, user, data, timestamp):
-        separator = ','
-        call = self._getBatchedCall('mergeConnection')
-        call.setString(1, 'contactGroups/')
-        call.setString(2, 'people/')
-        call.setString(3, data.getValue('Resource'))
-        call.setTimestamp(4, timestamp)
-        call.setString(5, separator)
-        members = data.getDefaultValue('Connections', ())
-        call.setString(6, separator.join(members))
-        call.addBatch()
-        print("DataBase._mergeConnection() %s - %s" % (data.getValue('Resource'), len(members)))
-        return len(members)
-
 # Procedures called internaly
-    def _encodePassword(self, password):
-        return uno.sequence(password)
-
-    def _escapeQuote(self, text):
-        return text.replace("'", "''")
-
     def _getViewName(self):
         if self._addressbook is None:
             configuration = getConfiguration(self._ctx, g_identifier, False)
