@@ -978,8 +978,6 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
         query = 'CALL "SelectUser"(?,?)'
     elif name == 'insertUser':
         query = 'CALL "InsertUser"(?,?,?,?,?,?)'
-    elif name == 'selectAddressbook':
-        query = 'CALL "SelectAddressbook"(?,?,?)'
     elif name == 'insertBook':
         query = 'CALL "InsertBook"(?,?,?,?,?,?)'
     elif name == 'updateAddressbookName':

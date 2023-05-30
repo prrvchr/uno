@@ -38,8 +38,6 @@ from com.sun.star.sdb.CommandType import QUERY
 from com.sun.star.sdbc.DataType import INTEGER
 from com.sun.star.sdbc.DataType import VARCHAR
 
-from ..unolib import KeyMap
-
 from ..dbtool import Array
 from ..dbtool import checkDataBase
 from ..dbtool import createDataSource
@@ -54,11 +52,9 @@ from ..dbtool import getDataSourceCall
 from ..dbtool import getDataSourceConnection
 from ..dbtool import executeQueries
 from ..dbtool import getDictFromResult
-from ..dbtool import getKeyMapFromResult
 from ..dbtool import getRowDict
 from ..dbtool import getSequenceFromResult
 from ..dbtool import getValueFromResult
-from ..dbtool import getKeyMapKeyMapFromResult
 
 from ..unotool import parseDateTime
 from ..unotool import createService
@@ -234,7 +230,7 @@ class DataBase(unohelper.Base):
         call.setString(2, name)
         result = call.executeQuery()
         if result.next():
-            user = getKeyMapFromResult(result)
+            user = getDataFromResult(result)
         call.close()
         return user
 
@@ -396,24 +392,6 @@ class DataBase(unohelper.Base):
         query = getSqlQuery(self._ctx, 'deleteView', format)
         statement.execute(query)
 
-    def selectAddressbook(self, uid, aid, name):
-        addressbook = None
-        call = self._getCall('selectAddressbook')
-        call.setInt(1, uid)
-        if aid is None:
-            call.setNull(2, INTEGER)
-        else:
-            call.setInt(2, aid)
-        if name:
-            call.setString(3, name)
-        else:
-            call.setNull(3, VARCHAR)
-        result = call.executeQuery()
-        if result.next():
-            addressbook = getKeyMapFromResult(result)
-        call.close()
-        return addressbook
-
     def insertUser(self, uri, scheme, server, path, name, addressbook=None):
         user = None
         call = self._getCall('insertUser')
@@ -425,7 +403,7 @@ class DataBase(unohelper.Base):
         call.setString(6, addressbook) if addressbook is not None else call.setNull(6, VARCHAR)
         result = call.executeQuery()
         if result.next():
-            user = getKeyMapFromResult(result)
+            user = getDataFromResult(result)
         call.close()
         return user
 
