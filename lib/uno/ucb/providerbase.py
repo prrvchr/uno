@@ -234,13 +234,16 @@ class ProviderBase(object):
     def getDocumentLocation(self, user):
         raise NotImplementedError
 
-    def mergeNewFolder(self, response, user, item):
+    def mergeNewFolder(self, user, itemid, response):
         raise NotImplementedError
 
     def createNewFile(self, user, data):
         raise NotImplementedError
 
     def parseRootFolder(self, parameter, content):
+        raise NotImplementedError
+
+    def updateItemId(self, database, item, response):
         raise NotImplementedError
 
     def initUser(self, database, user, token):
@@ -266,12 +269,12 @@ class ProviderBase(object):
         parameter = self.getRequestParameter(request, 'getItem', identifier)
         return request.execute(parameter)
 
-    def createFolder(self, user, item):
+    def createFolder(self, user, itemid, item):
         parameter = self.getRequestParameter(user.Request, 'createNewFolder', item)
         response = user.Request.execute(parameter)
-        return self.mergeNewFolder(response, user, item)
+        return self.mergeNewFolder(user, itemid, response)
 
-    def uploadFile(self, user, data, new=False):
+    def uploadFile(self, user, item, data, new=False):
         method = 'getNewUploadLocation' if new else 'getUploadLocation'
         parameter = self.getRequestParameter(user.Request, method, data)
         response = user.Request.execute(parameter)
@@ -279,21 +282,25 @@ class ProviderBase(object):
         if location is None:
             return False
         parameter = self.getRequestParameter(user.Request, 'getUploadStream', location)
-        url = self.SourceURL + g_separator + data.get('Id')
-        return user.Request.upload(parameter, url, g_chunk, 3, 10)
+        url = self.SourceURL + g_separator + item
+        response = user.Request.upload(parameter, url, g_chunk, 3, 10)
+        return self.updateItemId(user.DataBase, item, response)
 
-    def updateTitle(self, request, item):
+    def updateTitle(self, request, itemid, item):
         parameter = self.getRequestParameter(request, 'updateTitle', item)
         response = request.execute(parameter)
-        return response.IsPresent
+        response.close()
+        return itemid
 
-    def updateTrashed(self, request, item):
+    def updateTrashed(self, request, itemid, item):
         parameter = self.getRequestParameter(request, 'updateTrashed', item)
         response = request.execute(parameter)
-        return response.IsPresent
+        response.close()
+        return itemid
 
-    def updateParents(self, request, item):
+    def updateParents(self, request, itemid, item):
         parameter = self.getRequestParameter(request, 'updateParents', item)
         response = request.execute(parameter)
-        return response.IsPresent
+        response.close()
+        return itemid
 
