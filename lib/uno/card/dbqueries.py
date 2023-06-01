@@ -156,13 +156,18 @@ CREATE VIEW IF NOT EXISTS "%(Name)s" AS
 '''
         query = view % format
 
-    elif name == 'createUserBook':
-        synonym = '''\
-CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(Name)s" AS
-  SELECT %(Public)s."%(View)s".* FROM %(Public)s."%(View)s" 
-  WHERE %(Public)s."%(View)s"."%(UserColumn)s" = "%(UserId)s";
+    elif name == 'createUserView':
+        view = '''\
+CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(View)s" AS
+  SELECT %(Public)s."%(CardView)s".* FROM %(Public)s."%(CardView)s"
+  JOIN %(Public)s."Cards" ON %(Public)s."%(CardView)s"."Card"=%(Public)s."Cards"."Card"
+  JOIN %(Public)s."BookCards" ON %(Public)s."Cards"."Card"=%(Public)s."BookCards"."Card"
+  JOIN %(Public)s."Books" ON %(Public)s."BookCards"."Book"=%(Public)s."Books"."Book"
+  WHERE %(Public)s."Books"."User"=%(User)s
+  ORDER BY %(Public)s."%(CardView)s"."Created";
+GRANT SELECT ON "%(Schema)s"."%(View)s" TO "%(Name)s";
 '''
-        query = synonym % format
+        query = view % format
 
     elif name == 'createAddressbookView':
         view = '''\
@@ -194,18 +199,18 @@ GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
 
 # Create User and Schema Query
     elif name == 'createUser':
-        q = """CREATE USER "%(User)s" PASSWORD '%(Password)s'"""
-        q += ' ADMIN;' if format.get('Admin', False) else ';'
+        q = """CREATE USER "%(Name)s" PASSWORD '%(Password)s'"""
+        q += ' ADMIN;' if format.get('Admin') else ';'
         query = q % format
 
     elif name == 'createUserSchema':
-        query = 'CREATE SCHEMA "%(Schema)s" AUTHORIZATION "%(User)s";' % format
+        query = 'CREATE SCHEMA "%(Schema)s" AUTHORIZATION "%(Name)s";' % format
 
     elif name == 'setUserSchema':
-        query = 'ALTER USER "%(User)s" SET INITIAL SCHEMA "%(Schema)s";' % format
+        query = 'ALTER USER "%(Name)s" SET INITIAL SCHEMA "%(Schema)s";' % format
 
     elif name == 'setUserPassword':
-        query = """ALTER USER "%(User)s" SET PASSWORD '%(Password)s'""" % format
+        query = """ALTER USER "%(Name)s" SET PASSWORD '%(Password)s'""" % format
 
 # Get last IDENTITY value that was inserted into a table by the current session
     elif name == 'getIdentity':
@@ -305,56 +310,47 @@ INSERT INTO "Groups" ("Book","Uri","Name") VALUES (0,'/','#');
 # Create Procedure Query
     elif name == 'createSelectUser':
         query = """\
-CREATE PROCEDURE "SelectUser"(IN SERVER VARCHAR(128),
-                              IN NAME VARCHAR(128))
+CREATE PROCEDURE "SelectUser"(IN Server VARCHAR(128),
+                              IN Name VARCHAR(128),
+                              OUT Id INTEGER,
+                              OUT Uri VARCHAR(256),
+                              OUT Scheme VARCHAR(128),
+                              OUT Path VARCHAR(128))
   SPECIFIC "SelectUser_1"
   READS SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      SELECT U."User",U."Uri",U."Scheme",U."Server",U."Path",U."Name",
-        ARRAY_AGG(A."Book" ORDER BY A."Book") AS "Aids",
-        ARRAY_AGG(A."Uri" ORDER BY A."Book") AS "Uris",
-        ARRAY_AGG(A."Name" ORDER BY A."Book") AS "Names",
-        ARRAY_AGG(A."Tag" ORDER BY A."Book") AS "Tags",
-        ARRAY_AGG(A."Token" ORDER BY A."Book") AS "Tokens"
-      FROM "Users" AS U
-      LEFT JOIN "Books" AS A ON U."User"=A."User"
-      WHERE U."Server"=SERVER AND U."Name"=NAME
-      GROUP BY U."User",U."Uri",U."Scheme",U."Server",U."Path",U."Name"
+      SELECT B."Book",B."Uri",B."Name",B."Tag",B."Token"
+      FROM "Books" AS B
+      INNER JOIN "Users" AS U ON B."User"=U."User"
+      WHERE U."Server"=Server AND U."Name"=Name
     FOR READ ONLY;
+      SELECT "User","Uri","Scheme","Path" INTO Id,Uri,Scheme,Path FROM "Users"
+      WHERE "Server"=Server AND "Name"=Name;
     OPEN RSLT;
   END"""
 
     elif name == 'createInsertUser':
         query = """\
-CREATE PROCEDURE "InsertUser"(IN URI VARCHAR(256),
-                              IN SCHEME VARCHAR(128),
-                              IN SERVER VARCHAR(128),
-                              IN PATH VARCHAR(128),
-                              IN NAME VARCHAR(128),
-                              IN ADDRESSBOOK VARCHAR(128))
+CREATE PROCEDURE "InsertUser"(IN Uri VARCHAR(256),
+                              IN Scheme VARCHAR(128),
+                              IN Server VARCHAR(128),
+                              IN Path VARCHAR(128),
+                              IN Name VARCHAR(128),
+                              OUT Id INTEGER)
   SPECIFIC "InsertUser_1"
   MODIFIES SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
-    DECLARE PK1 INTEGER DEFAULT NULL;
     DECLARE RSLT CURSOR WITH RETURN FOR
-      SELECT U."User",U."Uri",U."Scheme",U."Server",U."Path",U."Name",
-        ARRAY_AGG(A."Book" ORDER BY A."Book") AS "Aids",
-        ARRAY_AGG(A."Uri" ORDER BY A."Book") AS "Uris",
-        ARRAY_AGG(A."Name" ORDER BY A."Book") AS "Names",
-        ARRAY_AGG(A."Tag" ORDER BY A."Book") AS "Tags",
-        ARRAY_AGG(A."Token" ORDER BY A."Book") AS "Tokens"
-      FROM "Users" AS U
-      LEFT JOIN "Books" AS A ON U."User"=A."User"
-      WHERE U."Server"=SERVER AND U."Name"=NAME
-      GROUP BY U."User",U."Uri",U."Scheme",U."Server",U."Path",U."Name"
+      SELECT B."Book",B."Uri",B."Name",B."Tag",B."Token"
+      FROM "Books" AS B
+      INNER JOIN "Users" AS U ON B."User"=U."User"
+      WHERE U."Server"=Server AND U."Name"=Name
     FOR READ ONLY;
-    INSERT INTO "Users" ("Uri","Scheme","Server","Path","Name") VALUES (URI,SCHEME,SERVER,PATH,NAME);
-    IF ADDRESSBOOK IS NOT NULL THEN
-      INSERT INTO "Books" ("User","Uri","Name","Tag") VALUES (IDENTITY(),'/',ADDRESSBOOK,'#');
-    END IF;
+    INSERT INTO "Users" ("Uri","Scheme","Server","Path","Name") VALUES (Uri,Scheme,Server,Path,Name);
+    SET Id = IDENTITY();
     OPEN RSLT;
   END"""
 
@@ -471,32 +467,32 @@ CREATE PROCEDURE "SelectChangedAddressbooks"(IN UID INTEGER,
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
-              A1."Book", NULL AS "Name", A1."Name" AS "OldName", 
-              'Deleted' AS "Query", A1."RowEnd" AS "Order"
-      FROM "Books" FOR SYSTEM_TIME AS OF FIRST AS A1
-      JOIN "Users" AS U ON A1."User"=U."User"
-      LEFT JOIN "Books" FOR SYSTEM_TIME AS OF LAST AS A2
-        ON A1."Book" = A2."Book"
-      WHERE A1."Book"!=0 AND A2."Book" IS NULL AND U."User"=UID)
+      (SELECT U."Name" AS "User", 
+              B1."Book", NULL AS "Name", B1."Name" AS "OldName", 
+              'Deleted' AS "Query", B1."RowEnd" AS "Order"
+      FROM "Books" FOR SYSTEM_TIME AS OF FIRST AS B1
+      JOIN "Users" AS U ON B1."User"=U."User"
+      LEFT JOIN "Books" FOR SYSTEM_TIME AS OF LAST AS B2
+        ON B1."Book" = B2."Book"
+      WHERE B1."Book"!=0 AND B2."Book" IS NULL AND U."User"=UID)
       UNION
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
-              A2."Book", A2."Name", NULL AS "OldName", 
-              'Inserted' AS "Query", A2."RowStart" AS "Order"
-      FROM "Books" FOR SYSTEM_TIME AS OF LAST AS A2
-      JOIN "Users" AS U ON A2."User"=U."User"
-      LEFT JOIN "Books" FOR SYSTEM_TIME AS OF FIRST AS A1
-        ON A2."Book"=A1."Book"
-      WHERE A2."Book"!=0 AND  A1."Book" IS NULL AND U."User"=UID)
+      (SELECT U."Name" AS "User", 
+              B2."Book", B2."Name", NULL AS "OldName", 
+              'Inserted' AS "Query", B2."RowStart" AS "Order"
+      FROM "Books" FOR SYSTEM_TIME AS OF LAST AS B2
+      JOIN "Users" AS U ON B2."User"=U."User"
+      LEFT JOIN "Books" FOR SYSTEM_TIME AS OF FIRST AS B1
+        ON B2."Book"=B1."Book"
+      WHERE B2."Book"!=0 AND  B1."Book" IS NULL AND U."User"=UID)
       UNION
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
-              A2."Book", A2."Name", A1."Name" AS "OldName", 
-              'Updated' AS "Query", A1."RowEnd" AS "Order"
-      FROM "Books" FOR SYSTEM_TIME AS OF LAST AS A2
-      JOIN "Users" AS U ON A2."User"=U."User"
-      INNER JOIN "Books" FOR SYSTEM_TIME FROM FIRST TO LAST AS A1
-        ON A2."Book"=A1."Book" AND A2."RowStart"=A1."RowEnd"
-      WHERE A2."Book"!=0 AND U."User"=UID)
+      (SELECT U."Name" AS "User", 
+              B2."Book", B2."Name", B1."Name" AS "OldName", 
+              'Updated' AS "Query", B1."RowEnd" AS "Order"
+      FROM "Books" FOR SYSTEM_TIME AS OF LAST AS B2
+      JOIN "Users" AS U ON B2."User"=U."User"
+      INNER JOIN "Books" FOR SYSTEM_TIME FROM FIRST TO LAST AS B1
+        ON B2."Book"=B1."Book" AND B2."RowStart"=B1."RowEnd"
+      WHERE B2."Book"!=0 AND U."User"=UID)
       ORDER BY "Order"
       FOR READ ONLY;
     OPEN RSLT;
@@ -531,35 +527,35 @@ CREATE PROCEDURE "SelectChangedGroups"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
+      (SELECT U."Name" AS "User", 
               REPLACE(U."Name",'.','-') AS "Schema", 
               G1."Group", NULL AS "Name", G1."Name" AS "OldName", 
               'Deleted' AS "Query", G1."RowEnd" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
-      JOIN "Books" AS A ON G1."Book"=A."Book"
-      JOIN "Users" AS U ON A."User"=U."User"
+      JOIN "Books" AS B ON G1."Book"=B."Book"
+      JOIN "Users" AS U ON B."User"=U."User"
       LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
         ON G1."Group" = G2."Group"
       WHERE G1."Group"!=0 AND G2."Group" IS NULL)
       UNION
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
+      (SELECT U."Name" AS "User", 
               REPLACE(U."Name",'.','-') AS "Schema", 
               G2."Group", G2."Name", NULL AS "OldName", 
               'Inserted' AS "Query", G2."RowStart" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
-      JOIN "Books" AS A ON G2."Book"=A."Book"
-      JOIN "Users" AS U ON A."User"=U."User"
+      JOIN "Books" AS B ON G2."Book"=B."Book"
+      JOIN "Users" AS U ON B."User"=U."User"
       LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
         ON G2."Group"=G1."Group"
       WHERE G2."Group"!=0 AND  G1."Group" IS NULL)
       UNION
-      (SELECT CAST(U."User" AS VARCHAR(9)) AS "User", 
+      (SELECT U."Name" AS "User", 
               REPLACE(U."Name",'.','-') AS "Schema", 
               G2."Group", G2."Name", G1."Name" AS "OldName", 
               'Updated' AS "Query", G1."RowEnd" AS "Order"
       FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
-      JOIN "Books" AS A ON G2."Book"=A."Book"
-      JOIN "Users" AS U ON A."User"=U."User"
+      JOIN "Books" AS B ON G2."Book"=B."Book"
+      JOIN "Users" AS U ON B."User"=U."User"
       INNER JOIN "Groups" FOR SYSTEM_TIME FROM FIRST TO LAST AS G1
         ON G2."Group"=G1."Group" AND G2."RowStart"=G1."RowEnd"
       WHERE G2."Group"!=0)
@@ -894,8 +890,8 @@ CREATE PROCEDURE "SelectCardGroup"()
       SELECT U."User", 
         ARRAY_AGG(JSON_OBJECT(G."Name": G."Group")) 
       FROM "Users" AS U 
-      INNER JOIN "Books" AS A ON U."User"=A."User" 
-      INNER JOIN "Groups" AS G ON A."Book"=G."Book" 
+      INNER JOIN "Books" AS B ON U."User"=B."User" 
+      INNER JOIN "Groups" AS G ON B."Book"=G."Book" 
       WHERE U."User"!=0 
       GROUP BY U."User" 
       FOR READ ONLY;
@@ -975,7 +971,7 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
 
 # Get Procedure Query
     elif name == 'selectUser':
-        query = 'CALL "SelectUser"(?,?)'
+        query = 'CALL "SelectUser"(?,?,?,?,?,?)'
     elif name == 'insertUser':
         query = 'CALL "InsertUser"(?,?,?,?,?,?)'
     elif name == 'insertBook':

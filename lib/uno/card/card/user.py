@@ -53,15 +53,15 @@ class User(unohelper.Base):
             self._ctx = ctx
             self._password = pwd
             self.Request = getRequest(ctx, server, name)
-            self._metadata = database.selectUser(server, name)
             self._sessions = []
+            self._metadata, books = database.selectUser(server, name)
             new = self._metadata is None
             if new:
                 if self._isOffLine(server):
                     raise getSqlException(self._ctx, self, 1004, 1108, '_getNewUser', name)
-                self._metadata = self._getNewUser(database, provider, scheme, server, name, pwd)
-                self._initNewUser(database, provider)
-            self._books = Books(ctx, self._metadata, new)
+                self._metadata, books = self._getNewUser(database, provider, scheme, server, name, pwd)
+                database.createUser(self.getSchema(), self.Id, name, pwd)
+            self._books = Books(ctx, books, new)
         except Exception as e:
             msg = "Error: %s" % traceback.format_exc()
             print(msg)
@@ -101,7 +101,7 @@ class User(unohelper.Base):
 
 # Procedures called by DataSource
     def getName(self):
-        return g_user % self.Id
+        return self.Name
 
     def getPassword(self):
         password = ''
@@ -129,17 +129,11 @@ class User(unohelper.Base):
     def _isOffLine(self, server):
         return getConnectionMode(self._ctx, server) != ONLINE
 
-    def _isNewUser(self):
-        return self._metadata is None
-
     def _getNewUser(self, database, provider, scheme, server, name, pwd):
         if self.Request is None:
             raise getSqlException(self._ctx, self, 1003, 1105, '_getNewUser', g_oauth2)
-        return provider.insertUser(database, self.Request, scheme, server, name, pwd)
-
-    def _initNewUser(self, database, provider):
-        name = self.getName()
-        if not database.createUser(name, self.getPassword()):
-            raise provider.getSqlException(1005, 1106, '_initNewUser', name)
-        database.createUserSchema(self.getSchema(), name)
+        data = provider.insertUser(database, self.Request, scheme, server, name, pwd)
+        if data is None:
+            raise getSqlException(self._ctx, self, 1006, 1107, '_getNewUser', name)
+        return data
 
