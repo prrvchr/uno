@@ -373,14 +373,13 @@ class DataBase(unohelper.Base):
         format['Schema'] = user.getSchema()
         format['Public'] = 'PUBLIC'
         format['View'] = g_cardview
-        format['Bookmark'] = g_bookmark
         if query == 'Deleted':
             self._deleteUserView(statement, format)
         elif query == 'Inserted':
-            self._createUserView(statement, 'createAddressbookView', format)
+            self._createUserView(statement, 'createBookView', format)
         elif query == 'Updated':
             self._deleteUserView(statement, format)
-            self._createUserView(statement, 'createAddressbookView', format)
+            self._createUserView(statement, 'createBookView', format)
         statement.close()
 
     def initGroupView(self, user, remove, add):

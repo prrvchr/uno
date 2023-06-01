@@ -145,37 +145,24 @@ def getSqlQuery(ctx, name, format=None):
         query = ' WITH SYSTEM VERSIONING'
 
 # Create Dynamic View Queries
-    elif name == 'createBookView':
-        view = '''\
-CREATE VIEW IF NOT EXISTS "%(Name)s" AS
-  SELECT "%(ViewName)s".*, "%(UserTable)s"."%(UserColumn)s" FROM "%(ViewName)s" 
-  JOIN "%(CardTable)s" ON "%(ViewName)s"."%(CardColumn)s"="%(CardTable)s"."%(CardColumn)s" 
-  JOIN "%(BookCardTable)s" ON "%(CardTable)s"."%(CardColumn)s"="%(BookCardTable)s"."%(CardColumn)s" 
-  JOIN "%(BookTable)s" ON "%(BookCardTable)s"."%(BookColumn)s"="%(BookTable)s"."%(BookColumn)s" 
-  JOIN "%(UserTable)s" ON "%(BookTable)s"."%(UserColumn)s"="%(UserTable)s"."%(UserColumn)s";
-'''
-        query = view % format
-
     elif name == 'createUserView':
         view = '''\
 CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(View)s" AS
   SELECT %(Public)s."%(CardView)s".* FROM %(Public)s."%(CardView)s"
-  JOIN %(Public)s."Cards" ON %(Public)s."%(CardView)s"."Card"=%(Public)s."Cards"."Card"
-  JOIN %(Public)s."BookCards" ON %(Public)s."Cards"."Card"=%(Public)s."BookCards"."Card"
-  JOIN %(Public)s."Books" ON %(Public)s."BookCards"."Book"=%(Public)s."Books"."Book"
+  INNER JOIN %(Public)s."BookCards" ON %(Public)s."%(CardView)s"."Card"=%(Public)s."BookCards"."Card"
+  INNER JOIN %(Public)s."Books" ON %(Public)s."BookCards"."Book"=%(Public)s."Books"."Book"
   WHERE %(Public)s."Books"."User"=%(User)s
   ORDER BY %(Public)s."%(CardView)s"."Created";
 GRANT SELECT ON "%(Schema)s"."%(View)s" TO "%(Name)s";
 '''
         query = view % format
 
-    elif name == 'createAddressbookView':
+    elif name == 'createBookView':
         view = '''\
 CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(Name)s" AS
   SELECT %(Public)s."%(View)s".* FROM %(Public)s."%(View)s"
-  JOIN %(Public)s."Cards" ON %(Public)s."%(View)s"."Card"=%(Public)s."Cards"."Card"
-  JOIN %(Public)s."BookCards" ON %(Public)s."Cards"."Card"=%(Public)s."BookCards"."Card"
-  JOIN %(Public)s."Books" ON %(Public)s."BookCards"."Book"=%(Public)s."Books"."Book"
+  INNER JOIN %(Public)s."BookCards" ON %(Public)s."%(View)s"."Card"=%(Public)s."BookCards"."Card"
+  INNER JOIN %(Public)s."Books" ON %(Public)s."BookCards"."Book"=%(Public)s."Books"."Book"
   WHERE %(Public)s."Books"."Book"=%(Book)s
   ORDER BY %(Public)s."%(View)s"."Created";
 GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
@@ -186,8 +173,8 @@ GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
         view = '''\
 CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(Name)s" AS
   SELECT %(Public)s."%(View)s".* FROM %(Public)s."%(View)s"
-  JOIN %(Public)s."GroupCards" ON %(Public)s."%(View)s"."Card"=%(Public)s."GroupCards"."Card"
-  JOIN %(Public)s."Groups" ON %(Public)s."GroupCards"."Group"=%(Public)s."Groups"."Group"
+  INNER JOIN %(Public)s."GroupCards" ON %(Public)s."%(View)s"."Card"=%(Public)s."GroupCards"."Card"
+  INNER JOIN %(Public)s."Groups" ON %(Public)s."GroupCards"."Group"=%(Public)s."Groups"."Group"
   WHERE %(Public)s."Groups"."Group"=%(Group)s
   ORDER BY %(Public)s."%(View)s"."Created";
 GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
