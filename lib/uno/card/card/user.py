@@ -57,10 +57,8 @@ class User(unohelper.Base):
             self._metadata, books = database.selectUser(server, name)
             new = self._metadata is None
             if new:
-                if self._isOffLine(server):
-                    raise getSqlException(self._ctx, self, 1004, 1108, '_getNewUser', name)
                 self._metadata, books = self._getNewUser(database, provider, scheme, server, name, pwd)
-                database.createUser(self.getSchema(), self.Id, name, pwd)
+                database.createUser(self.getSchema(), self.Id, name, '')
             self._books = Books(ctx, books, new)
         except Exception as e:
             msg = "Error: %s" % traceback.format_exc()
@@ -126,14 +124,16 @@ class User(unohelper.Base):
     def getBooks(self):
         return self._books.getBooks()
 
-    def _isOffLine(self, server):
-        return getConnectionMode(self._ctx, server) != ONLINE
-
     def _getNewUser(self, database, provider, scheme, server, name, pwd):
+        if self._isOffLine(server):
+            raise getSqlException(self._ctx, self, 1004, 1108, '_getNewUser', name)
         if self.Request is None:
             raise getSqlException(self._ctx, self, 1003, 1105, '_getNewUser', g_oauth2)
         data = provider.insertUser(database, self.Request, scheme, server, name, pwd)
         if data is None:
             raise getSqlException(self._ctx, self, 1006, 1107, '_getNewUser', name)
         return data
+
+    def _isOffLine(self, server):
+        return getConnectionMode(self._ctx, server) != ONLINE
 
