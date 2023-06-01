@@ -39,6 +39,7 @@ from .provider import getSqlException
 
 from ..dbconfig import g_user
 from ..dbconfig import g_schema
+from ..dbconfig import g_dotcode
 
 from ..unotool import getConnectionMode
 from ..oauth2 import getRequest
@@ -106,7 +107,9 @@ class User(unohelper.Base):
         return password
 
     def getSchema(self):
-        return self.Name.replace('.','-')
+        # FIXME: We need to replace the dot for schema name
+        # FIXME: g_dotcode is used in database procedure too...
+        return self.Name.replace('.', chr(g_dotcode))
 
     def hasSession(self):
         return len(self._sessions) > 0

@@ -520,43 +520,44 @@ CREATE PROCEDURE "GetLastGroupSync"(OUT FIRST TIMESTAMP(6) WITH TIME ZONE)
 
     elif name == 'createSelectChangedGroups':
         query = """\
-CREATE PROCEDURE "SelectChangedGroups"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
-                                       IN LAST TIMESTAMP(6) WITH TIME ZONE)
+CREATE PROCEDURE "SelectChangedGroups"(IN First TIMESTAMP(6) WITH TIME ZONE,
+                                       IN Last TIMESTAMP(6) WITH TIME ZONE,
+                                       IN Dot INTEGER)
   SPECIFIC "SelectChangedGroups_1"
   MODIFIES SQL DATA
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
       (SELECT U."Name" AS "User", 
-              REPLACE(U."Name",'.','-') AS "Schema", 
+              REPLACE(U."Name",'.',CHAR(Dot)) AS "Schema", 
               G1."Group", NULL AS "Name", G1."Name" AS "OldName", 
               'Deleted' AS "Query", G1."RowEnd" AS "Order"
-      FROM "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
+      FROM "Groups" FOR SYSTEM_TIME AS OF First AS G1
       JOIN "Books" AS B ON G1."Book"=B."Book"
       JOIN "Users" AS U ON B."User"=U."User"
-      LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
+      LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF Last AS G2
         ON G1."Group" = G2."Group"
       WHERE G1."Group"!=0 AND G2."Group" IS NULL)
       UNION
       (SELECT U."Name" AS "User", 
-              REPLACE(U."Name",'.','-') AS "Schema", 
+              REPLACE(U."Name",'.',CHAR(Dot)) AS "Schema", 
               G2."Group", G2."Name", NULL AS "OldName", 
               'Inserted' AS "Query", G2."RowStart" AS "Order"
-      FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
+      FROM "Groups" FOR SYSTEM_TIME AS OF Last AS G2
       JOIN "Books" AS B ON G2."Book"=B."Book"
       JOIN "Users" AS U ON B."User"=U."User"
-      LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF FIRST AS G1
+      LEFT JOIN "Groups" FOR SYSTEM_TIME AS OF First AS G1
         ON G2."Group"=G1."Group"
       WHERE G2."Group"!=0 AND  G1."Group" IS NULL)
       UNION
       (SELECT U."Name" AS "User", 
-              REPLACE(U."Name",'.','-') AS "Schema", 
+              REPLACE(U."Name",'.',CHAR(Dot)) AS "Schema", 
               G2."Group", G2."Name", G1."Name" AS "OldName", 
               'Updated' AS "Query", G1."RowEnd" AS "Order"
-      FROM "Groups" FOR SYSTEM_TIME AS OF LAST AS G2
+      FROM "Groups" FOR SYSTEM_TIME AS OF Last AS G2
       JOIN "Books" AS B ON G2."Book"=B."Book"
       JOIN "Users" AS U ON B."User"=U."User"
-      INNER JOIN "Groups" FOR SYSTEM_TIME FROM FIRST TO LAST AS G1
+      INNER JOIN "Groups" FOR SYSTEM_TIME FROM First TO Last AS G1
         ON G2."Group"=G1."Group" AND G2."RowStart"=G1."RowEnd"
       WHERE G2."Group"!=0)
       ORDER BY "Order"
@@ -1007,7 +1008,7 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
     elif name == 'selectChangedAddressbooks':
         query = 'CALL "SelectChangedAddressbooks"(?,?,?)'
     elif name == 'selectChangedGroups':
-        query = 'CALL "SelectChangedGroups"(?,?)'
+        query = 'CALL "SelectChangedGroups"(?,?,?)'
     elif name == 'getLastAddressbookSync':
         query = 'CALL "GetLastAddressbookSync"(?)'
     elif name == 'getLastGroupSync':

@@ -74,6 +74,7 @@ from ..dbconfig import g_jar
 from ..dbconfig import g_cardview
 from ..dbconfig import g_bookmark
 from ..dbconfig import g_csv
+from ..dbconfig import g_dotcode
 
 from .dbinit import getStaticTables
 from .dbinit import getQueries
@@ -352,6 +353,7 @@ class DataBase(unohelper.Base):
         call = self._getCall('selectChangedGroups')
         call.setObject(1, start)
         call.setObject(2, stop)
+        call.setInt(3, g_dotcode)
         result = call.executeQuery()
         while result.next():
             groups.append(getDataFromResult(result))
