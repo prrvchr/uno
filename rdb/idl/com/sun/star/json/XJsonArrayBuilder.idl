@@ -24,79 +24,39 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
  */
 
-#ifndef __com_sun_star_rest_XRequestParameter_idl__
-#define __com_sun_star_rest_XRequestParameter_idl__
+#ifndef __com_sun_star_json_XJsonArrayBuilder_idl__
+#define __com_sun_star_json_XJsonArrayBuilder_idl__
 
-#include <com/sun/star/uno/XInterface.idl>
-#include <com/sun/star/io/XInputStream.idl>
-#include <com/sun/star/rest/JSONDecodeException.idl>
-#include <com/sun/star/rest/RequestException.idl>
-#include <com/sun/star/json/XJsonBuilder.idl>
+#include <com/sun/star/json/XJsonStructureBuilder.idl>
+#include <com/sun/star/json/XJsonArray.idl>
 
 
-module com { module sun { module star { module rest {
+module com { module sun { module star { module json {
 
-interface XRequestParameter: com::sun::star::uno::XInterface
+interface XJsonArrayBuilder: com::sun::star::json::XJsonStructureBuilder
 {
 
-    void setUpload([in] long StatusCode,
-                   [in] string Field,
-                   [in] string Pattern,
-                   [in] short Offset,
-                   [in] short ParameterType);
+    XJsonArrayBuilder addShort([in] short value);
 
-    boolean isResumable();
+    XJsonArrayBuilder addLong([in] long value);
 
-    boolean hasNextPage();
+    XJsonArrayBuilder addHyper([in] hyper value);
 
-    void setNextPage([in] string Key,
-                     [in] string Value,
-                     [in] short ParameterType);
+    XJsonArrayBuilder addFloat([in] float value);
 
-    boolean hasHeader([in] string Key);
+    XJsonArrayBuilder addDouble([in] double value);
 
-    string getHeader([in] string Key);
+    XJsonArrayBuilder addBoolean([in] boolean value);
 
-    void setHeader([in] string Key,
-                   [in] string Value);
+    XJsonArrayBuilder addString([in] string value);
 
-    void setQuery([in] string Key,
-                  [in] string Value);
+    XJsonArrayBuilder addArray([in] XJsonStructureBuilder value);
 
-    void setJson([in] string Path,
-                 [in] any Value);
+    XJsonArrayBuilder addObject([in] XJsonStructureBuilder value);
 
-    com::sun::star::json::XJsonBuilder getJsonBuilder();
+    XJsonArrayBuilder addNull();
 
-    void setJsonStructure([in] com::sun::star::json::XJsonStructure Json);
-
-    string toJson([in] boolean Stream)
-           raises(JSONDecodeException);
-
-    [attribute, readonly] string Name;
-    [attribute] string Method;
-    [attribute] string Url;
-    [attribute] string Headers;
-    [attribute] string Query;
-    [attribute] string Json;
-    [attribute] sequence<byte> Data;
-    [attribute] string Text;
-    [attribute] com::sun::star::io::XInputStream DataSink;
-    [attribute] boolean NoAuth;
-    [attribute] sequence<string> Auth;
-    [attribute] boolean NoRedirect;
-    [attribute] boolean NoVerify;
-    [attribute] boolean Stream;
-    [attribute] string NextUrl;
-    [attribute] string SyncToken;
-    [attribute, readonly] long PageCount;
-    [attribute] char Separator;
-    [attribute, readonly] long RangeStatus;
-    [attribute, readonly] string RangeField;
-    [attribute, readonly] string RangePattern;
-    [attribute, readonly] short RangeOffset;
-    [attribute, readonly] short RangeType;
-
+    XJsonArray build();
 
 };
 
