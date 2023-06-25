@@ -24,38 +24,15 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
  */
 
-#ifndef __com_sun_star_json_JsonValueType_idl__
-#define __com_sun_star_json_JsonValueType_idl__
+#ifndef __com_sun_star_rest_InvalidURLException_idl__
+#define __com_sun_star_rest_InvalidURLException_idl__
 
+#include <com/sun/star/rest/RequestException.idl>
 
- module com {  module sun {  module star {  module json {
+module com {  module sun {  module star {  module rest {
 
-enum JsonValueType
+exception InvalidURLException: com::sun::star::rest::RequestException
 {
-
-    /** reflecting the XJsonArray type
-    */
-    ARRAY,
-
-    /** reflecting the UNO boolean type; true and false
-    */
-    BOOLEAN,
-
-    /** reflecting the UNO void
-    */
-    NULL,
-
-    /** reflecting the XJsonNumber type
-    */
-    NUMBER,
-
-    /** reflecting the XJsonObject type
-    */
-    OBJECT,
-
-    /** reflecting the UNO string type
-    */
-    STRING
 
 };
 
