@@ -401,7 +401,7 @@ CREATE PROCEDURE "MergeCard"(IN Book INTEGER,
                              IN Uri VARCHAR(256),
                              IN Tag VARCHAR(128),
                              IN Deleted BOOLEAN,
-                             IN Data VARCHAR(10000))
+                             IN Data VARCHAR(100000))
   SPECIFIC "MergeCard_1"
   MODIFIES SQL DATA
   BEGIN ATOMIC
