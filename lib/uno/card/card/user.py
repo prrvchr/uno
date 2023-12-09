@@ -43,9 +43,6 @@ from ..dbconfig import g_dotcode
 
 from ..unotool import getConnectionMode
 
-from ..oauth2 import getRequest
-from ..oauth2 import g_service
-
 import traceback
 
 
@@ -58,17 +55,22 @@ class User(object):
         new = self._metadata is None
         cls, mtd = 'User', '__init__()'
         if not new:
-            request = getRequest(ctx, server, name)
+            print("User.__init__() 1")
+            request = provider.getRequest(server, name)
             if request is None:
                 raise getSqlException(ctx, source, 1002, 1105, cls, mtd, name)
         else:
+            print("User.__init__() 2")
             if self._isOffLine(server):
                 raise getSqlException(ctx, source, 1004, 1108, cls, mtd, name)
-            request = getRequest(ctx, server, name)
+            print("User.__init__() 3")
+            request = provider.getRequest(server, name)
             if request is None:
+                print("User.__init__() 4")
                 raise getSqlException(ctx, source, 1002, 1105, cls, mtd, name)
             self._metadata, books = self._getUserData(ctx, source, cls, mtd, database,
                                                       provider, request, scheme, server, name, pwd)
+            print("User.__init__() 5")
             database.createUser(self.getSchema(), self.Id, name, '')
         self.Request = request
         self._books = Books(ctx, books, new)
