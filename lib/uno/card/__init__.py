@@ -37,6 +37,8 @@ from .oauth2 import getOAuth2Version
 
 from .logger import getLogger
 
+from .cardtool import getLogException
+
 from .dbtool import getConnectionUrl
 from .dbtool import getDriverPropertyInfos
 from .dbtool import getSqlException

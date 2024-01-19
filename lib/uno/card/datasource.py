@@ -43,6 +43,7 @@ from .cardtool import getSqlException
 
 from .unotool import getDesktop
 
+from threading import Event
 import traceback
 
 
@@ -54,7 +55,8 @@ class DataSource(object):
         self._database = database
         self._listener = EventListener(self)
         self._provider = Provider(ctx, database)
-        self._replicator = Replicator(ctx, database, self._provider, self._users)
+        self._sync = Event()
+        self._replicator = Replicator(ctx, database, self._provider, self._users, self._sync)
         listener = TerminateListener(self._replicator)
         getDesktop(ctx).addTerminateListener(listener)
 
@@ -68,8 +70,6 @@ class DataSource(object):
         if name in self._users:
             user = self._users.get(name)
             user.removeSession(self._database.getSessionId(connection))
-        if not self._hasSession():
-            self._replicator.stop()
 
 # Procedures called by Driver
     def getConnection(self, source, scheme, server, account, password):
@@ -79,7 +79,7 @@ class DataSource(object):
             user = self._users.get(name)
             if not user.Request.isAuthorized():
                 cls, mtd = 'DataSource', 'getConnection()'
-                raise getSqlException(self._ctx, source, 1002, 1105, cls, mtd, name)
+                raise getSqlException(self._ctx, source, 1002, 1401, cls, mtd, name)
         else:
             user = User(self._ctx, source, self._database,
                         self._provider, scheme, server, account, password)
@@ -92,7 +92,7 @@ class DataSource(object):
         user.addSession(self._database.getSessionId(connection))
         # User and/or AddressBooks has been initialized and the connection to the database is done...
         # We can start the database replication in a background task.
-        self._replicator.start()
+        self._sync.set()
         connection.addEventListener(self._listener)
         return connection
 

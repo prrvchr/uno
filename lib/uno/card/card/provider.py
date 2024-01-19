@@ -55,13 +55,16 @@ class Provider(object):
     def parseDateTime(self, timestamp):
         return getDateTimeFromString(timestamp, self.DateTimeFormat)
 
+    # Method called from User.__init__()
+    # This main method call Request with OAuth2 mode
+    def getRequest(self, url, name):
+        return getRequest(self._ctx, url, name)
+
     # Need to be implemented method
-    def insertUser(self, database, request, scheme, server, name, pwd):
+    def insertUser(self, source, database, request, scheme, server, name, pwd):
         raise NotImplementedError
 
-    def getRequest(self, url, user):
-        return getRequest(self._ctx, url, user)
-
+    # Method called from DataSource.getConnection()
     def initAddressbooks(self, source, database, user):
         raise NotImplementedError
 
@@ -88,7 +91,7 @@ class Provider(object):
         print("Provider.initUserBooks() 4")
         if not count:
             cls, mtd = 'Provider', 'initUserBooks()'
-            raise getSqlException(self._ctx, source, 1006, 1109, cls, mtd, user.Name, user.Server)
+            raise getSqlException(self._ctx, source, 1006, 1611, cls, mtd, user.Name, user.Server)
         if modified and self.supportAddressBook():
             database.initAddressbooks(user)
 
@@ -106,5 +109,5 @@ class Provider(object):
 
     # Can be overwritten method
     def syncGroups(self, database, user, addressbook, pages, count):
-        pass
+        return pages, count, None
 
