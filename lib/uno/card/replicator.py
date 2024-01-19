@@ -56,40 +56,40 @@ class Replicator(Thread):
         self._config = getConfiguration(ctx, g_identifier, False)
         self._users = users
         self._sync = sync
+        self._canceled = False
         self.start()
 
-    # XRestReplicator
     def dispose(self):
-        print("replicator.dispose() 1")
         self._canceled = True
         self._sync.set()
         self.join()
-        print("replicator.dispose() 2")
 
     def run(self):
+        cls, mtd = 'Replicator', 'run()'
         logger = getLogger(self._ctx, g_synclog, g_basename)
         try:
             logger.logprb(INFO, 'Replicator', 'run()', 101)
             while not self._canceled:
                 timeout = self._config.getByName('ReplicateTimeout')
-                logger.logprb(INFO, 'Replicator', 'run()', 102, timeout // 60)
+                logger.logprb(INFO, cls, mtd, 102, timeout // 60)
                 self._sync.clear()
                 self._sync.wait(timeout)
                 if self._canceled:
                     continue
                 users, pages, total = self._synchronize(logger)
-                logger.logprb(INFO, 'Replicator', 'run()', 103, users, pages, total)
+                logger.logprb(INFO, cls, mtd, 103, users, pages, total)
                 if total > 0:
                     users, pages, total = self._finalize(logger)
-                    logger.logprb(INFO, 'Replicator', 'run()', 104, users, pages, total)
+                    logger.logprb(INFO, cls, mtd, 104, users, pages, total)
                 self._database.dispose()
-            logger.logprb(INFO, 'Replicator', 'run()', 105)
+            logger.logprb(INFO, cls, mtd, 105)
         except UnoException as e:
-            logger.logprb(SEVERE, 'Replicator', 'run()', 106, e.Message)
+            logger.logprb(SEVERE, cls, mtd, 106, e.Message)
         except Exception as e:
-            logger.logprb(SEVERE, 'Replicator', 'run()', 107, e, traceback.format_exc())
+            logger.logprb(SEVERE, cls, mtd, 107, e, traceback.format_exc())
 
     def _synchronize(self, logger):
+        cls, mtd = 'Replicator', '_synchronize()'
         users = pages = count = 0
         try:
             for user in self._users.values():
@@ -98,10 +98,10 @@ class Replicator(Thread):
                 if not user.hasSession():
                     continue
                 if user.isOffLine():
-                    logger.logprb(INFO, 'Replicator', '_synchronize()', 111)
+                    logger.logprb(INFO, cls, mtd, 111)
                 else:
                     users += 1
-                    logger.logprb(INFO, 'Replicator', '_synchronize()', 112, user.Name)
+                    logger.logprb(INFO, cls, mtd, 112, user.Name)
                     for book in user.getBooks():
                         if self._canceled:
                             break
@@ -111,14 +111,15 @@ class Replicator(Thread):
                             pages, count, args = self._provider.pullCard(self._database, user, book, pages, count)
                         if args is not None:
                             logger.logprb(SEVERE, *args)
-                    logger.logprb(INFO, 'Replicator', '_synchronize()', 113, user.Name)
+                    logger.logprb(INFO, cls, mtd, 113, user.Name)
         except UnoException as e:
-            logger.logprb(SEVERE, 'Replicator', '_synchronize()', 114, e.Message)
+            logger.logprb(SEVERE, cls, mtd, 114, e.Message)
         except Exception as e:
-            logger.logprb(SEVERE, 'Replicator', '_synchronize()', 115, e, traceback.format_exc())
+            logger.logprb(SEVERE, cls, mtd, 115, e, traceback.format_exc())
         return users, pages, count
 
     def _finalize(self, logger):
+        cls, mtd = 'Replicator', '_finalize()'
         users = pages = count = 0
         try:
             self._provider.parseCard(self._database)
@@ -128,22 +129,22 @@ class Replicator(Thread):
                 if not user.hasSession():
                     continue
                 if user.isOffLine():
-                    logger.logprb(INFO, 'Replicator', '_finalize()', 121)
+                    logger.logprb(INFO, cls, mtd, 121)
                 else:
                     users += 1
-                    logger.logprb(INFO, 'Replicator', '_finalize()', 122, user.Name)
+                    logger.logprb(INFO, cls, mtd, 122, user.Name)
                     for book in user.getBooks():
                         if self._canceled:
                             break
                         pages, count, args = self._provider.syncGroups(self._database, user, book, pages, count)
                         if args is not None:
                             logger.logprb(SEVERE, *args)
-                    logger.logprb(INFO, 'Replicator', '_finalize()', 123, user.Name)
+                    logger.logprb(INFO, cls, mtd, 123, user.Name)
             if not self._canceled:
-                self._database.syncGroups(stop)
+                self._database.syncGroups()
         except UnoException as e:
-            logger.logprb(SEVERE, 'Replicator', '_finalize()', 124, e.Message)
+            logger.logprb(SEVERE, cls, mtd, 124, e.Message)
         except Exception as e:
-            logger.logprb(SEVERE, 'Replicator', '_finalize()', 125, e, traceback.format_exc())
+            logger.logprb(SEVERE, cls, mtd, 125, e, traceback.format_exc())
         return users, pages, count
 

@@ -27,51 +27,58 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import unohelper
+from com.sun.star.sdbc import SQLException
 
-from com.sun.star.logging.LogLevel import INFO
-from com.sun.star.logging.LogLevel import SEVERE
+from .database import DataBase
 
-from .optionsmodel import OptionsModel
-from .optionsview import OptionsView
+from .datasource import DataSource
 
-from ..unotool import getDesktop
+from .cardtool import getLogException
 
-from ..logger import LogManager
+from .dbtool import getConnectionUrl
 
-from ..configuration import g_identifier
-from ..configuration import g_defaultlog
-from ..configuration import g_synclog
+from .unotool import checkVersion
+from .unotool import getExtensionVersion
 
-from collections import OrderedDict
-import os
-import sys
+from .oauth2 import getOAuth2Version
+from .oauth2 import g_extension as g_oauth2ext
+from .oauth2 import g_version as g_oauth2ver
+
+from .jdbcdriver import g_extension as g_jdbcext
+from .jdbcdriver import g_identifier as g_jdbcid
+from .jdbcdriver import g_version as g_jdbcver
+
+from .configuration import g_extension
+from .configuration import g_host
+
+from .dbconfig import g_folder
+from .dbconfig import g_version
+
 import traceback
 
 
-class OptionsManager(unohelper.Base):
-    def __init__(self, ctx, window, logger):
-        self._ctx = ctx
-        self._model = OptionsModel(ctx)
-        timeout, view, enabled = self._model.getViewData()
-        self._view = OptionsView(window, timeout, view, enabled)
-        self._logmanager = LogManager(self._ctx, window.Peer, 'requirements.txt', g_identifier, g_defaultlog, g_synclog)
-        self._logger = logger
-        self._logger.logprb(INFO, 'OptionsManager', '__init__()', 201)
-
-    def loadSetting(self):
-        self._view.setTimeout(self._model.getTimeout())
-        self._view.setViewName(self._model.getViewName())
-        self._logmanager.loadSetting()
-        self._logger.logprb(INFO, 'OptionsManager', 'loadSetting()', 211)
-
-    def saveSetting(self):
-        timeout, view = self._view.getViewData()
-        option = self._model.setViewData(timeout, view)
-        log = self._logmanager.saveSetting()
-        self._logger.logprb(INFO, 'OptionsManager', 'saveSetting()', 221, option, log)
-
-    def viewData(self):
-        url = self._model.getDatasourceUrl()
-        getDesktop(self._ctx).loadComponentFromURL(url, '_default', 0, ())
+def getDataSource(ctx, logger, source, cls, mtd):
+    oauth2 = getOAuth2Version(ctx)
+    driver = getExtensionVersion(ctx, g_jdbcid)
+    if oauth2 is None:
+        raise getLogException(logger, source, 1000, 1121, cls, mtd, g_oauth2ext, g_extension)
+    elif not checkVersion(oauth2, g_oauth2ver):
+        raise getLogException(logger, source, 1000, 1122, cls, mtd, g_oauth2ext, g_oauth2ver)
+    elif driver is None:
+        raise getLogException(logger, source, 1000, 1121, cls, mtd, g_jdbcext, g_extension)
+    elif not checkVersion(driver, g_jdbcver):
+        raise getLogException(logger, source, 1000, 1122, cls, mtd, g_jdbcext, g_jdbcver)
+    else:
+        path = g_folder + '/' + g_host
+        url = getConnectionUrl(ctx, path)
+        try:
+            database = DataBase(ctx, url)
+        except SQLException as e:
+            raise getLogException(logger, source, 1005, 1123, cls, mtd, url, e.Message)
+        else:
+            if not database.isUptoDate():
+                raise getLogException(logger, source, 1005, 1124, cls, mtd, database.Version, g_version)
+            else:
+                return DataSource(ctx, database)
+    return None
 

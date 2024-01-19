@@ -33,20 +33,20 @@ from .dbtool import getSqlException as getException
 
 from .logger import getLogger
 
-from .configuration import g_errorlog
 from .configuration import g_basename
+from .configuration import g_defaultlog
+from .configuration import g_extension
 
 import traceback
 
-
-def getSqlException(ctx, source, state, code, cls, mtd, *args):
-    logger = getLogger(ctx, g_errorlog, g_basename)
-    return getLogException(logger, source, state, code, cls, mtd, *args)
 
 def getLogException(logger, source, state, code, cls, mtd, *args):
     status = logger.resolveString(state)
     msg = logger.resolveString(code, *args)
     logger.logp(SEVERE, cls, mtd, msg)
-    error = getException(status, code, msg, source)
-    return error
+    return getException(status, code, msg, source)
+
+def getSqlException(ctx, source, state, code, cls, mtd, *args):
+    logger = getLogger(ctx, g_defaultlog, g_basename)
+    return getLogException(logger, source, state, code, cls, mtd, *args)
 
