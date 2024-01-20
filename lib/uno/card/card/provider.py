@@ -45,6 +45,7 @@ class Provider(object):
     def __init__(self, ctx):
         self._ctx = ctx
 
+    # Currently only vCardOOo supports multiple address books
     def supportAddressBook(self):
         return False
 
