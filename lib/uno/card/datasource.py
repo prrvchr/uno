@@ -47,7 +47,7 @@ from threading import Event
 import traceback
 
 
-class DataSource(object):
+class DataSource():
     def __init__(self, ctx, database):
         self._ctx = ctx
         self._maps = {}
@@ -72,7 +72,7 @@ class DataSource(object):
             user.removeSession(self._database.getSessionId(connection))
 
 # Procedures called by Driver
-    def getConnection(self, source, scheme, server, account, password):
+    def getConnection(self, source, scheme, server, account, password=''):
         uri = self._provider.getUserUri(server, account)
         if uri in self._maps:
             name = self._maps.get(uri)

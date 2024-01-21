@@ -550,23 +550,14 @@ class DataBase(object):
         self._setBatchModeOff()
         return count
 
-    def mergeGroupData(self, gid, timestamp, iterator):
-        print("Provider.mergeGroupData() 1")
-        count = 0
-        self._setBatchModeOn()
+    def mergeGroupMembers(self, gid, timestamp, members):
         call = self._getCall('mergeGroupMembers')
         call.setInt(1, gid)
         call.setTimestamp(2, timestamp)
-        for members in iterator:
-            call.setArray(3, Array('VARCHAR', members))
-            call.addBatch()
-            count += 1
-        if count:
-            call.executeBatch()
+        call.setArray(3, Array('VARCHAR', members))
+        call.executeUpdate()
         call.close()
-        self.Connection.commit()
-        self._setBatchModeOff()
-        return count
+        return 1
 
     def deleteCard(self, urls):
         call = self._getCall('deleteCard')
