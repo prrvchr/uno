@@ -69,14 +69,15 @@ class Replicator(Thread):
         logger = getLogger(self._ctx, g_synclog, g_basename)
         try:
             logger.logprb(INFO, cls, mtd, 101)
+            timeout = self._config.getByName('ReplicateTimeout')
             while not self._canceled:
-                timeout = self._config.getByName('ReplicateTimeout')
-                logger.logprb(INFO, cls, mtd, 102, timeout // 60)
                 self._sync.clear()
                 self._sync.wait(timeout)
                 if self._canceled:
                     continue
                 if not self._hasConnectedUser():
+                    timeout = self._config.getByName('ReplicateTimeout')
+                    logger.logprb(INFO, cls, mtd, 102, timeout // 60)
                     continue
                 users, pages, total = self._syncCard(logger)
                 logger.logprb(INFO, cls, '_syncCard()', 103, users, pages, total)
@@ -84,11 +85,15 @@ class Replicator(Thread):
                     users, pages, total = self._syncGroup(logger)
                     logger.logprb(INFO, cls, '_syncGroup()', 104, users, pages, total)
                 self._database.dispose()
-            logger.logprb(INFO, cls, mtd, 105)
+                if self._canceled:
+                    continue
+                timeout = self._config.getByName('ReplicateTimeout')
+                logger.logprb(INFO, cls, mtd, 105, timeout // 60)
+            logger.logprb(INFO, cls, mtd, 106)
         except UnoException as e:
-            logger.logprb(SEVERE, cls, mtd, 106, e.Message)
+            logger.logprb(SEVERE, cls, mtd, 107, e.Message)
         except Exception as e:
-            logger.logprb(SEVERE, cls, mtd, 107, e, traceback.format_exc())
+            logger.logprb(SEVERE, cls, mtd, 108, e, traceback.format_exc())
 
     def _syncCard(self, logger):
         cls, mtd = 'Replicator', '_syncCard()'
