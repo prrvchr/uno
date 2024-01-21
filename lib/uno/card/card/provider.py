@@ -118,6 +118,12 @@ class Provider(object):
     def parseCard(self, database):
         raise NotImplementedError
 
+    def raiseForStatus(self, response, source, mtd, code, name, user, url):
+        status = response.StatusCode
+        msg = response.Text
+        response.close()
+        raise getSqlException(self._ctx, source, code, 1601, 'Provider', mtd, name, status, user, url, msg)
+
     # Can be overwritten method
     def syncGroups(self, database, user, addressbook, pages, count):
         return pages, count, None

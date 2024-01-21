@@ -61,13 +61,13 @@ def getDataSource(ctx, logger, source, cls, mtd):
     oauth2 = getOAuth2Version(ctx)
     driver = getExtensionVersion(ctx, g_jdbcid)
     if oauth2 is None:
-        raise getLogException(logger, source, 1000, 1121, cls, mtd, g_oauth2ext, g_extension)
+        raise getLogException(logger, source, 1003, 1121, cls, mtd, g_oauth2ext, g_extension)
     elif not checkVersion(oauth2, g_oauth2ver):
-        raise getLogException(logger, source, 1000, 1122, cls, mtd, g_oauth2ext, g_oauth2ver)
+        raise getLogException(logger, source, 1003, 1122, cls, mtd, g_oauth2ext, g_oauth2ver)
     elif driver is None:
-        raise getLogException(logger, source, 1000, 1121, cls, mtd, g_jdbcext, g_extension)
+        raise getLogException(logger, source, 1003, 1121, cls, mtd, g_jdbcext, g_extension)
     elif not checkVersion(driver, g_jdbcver):
-        raise getLogException(logger, source, 1000, 1122, cls, mtd, g_jdbcext, g_jdbcver)
+        raise getLogException(logger, source, 1003, 1122, cls, mtd, g_jdbcext, g_jdbcver)
     else:
         path = g_folder + '/' + g_host
         url = getConnectionUrl(ctx, path)
