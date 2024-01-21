@@ -129,11 +129,11 @@ class Provider(object):
         raise getSqlException(self._ctx, source, code, 1601, 'Provider', mtd,
                               parameter.Name, status, user, parameter.Url, msg)
 
-    def getLoggerArgs(self, response, mtd, code, parameter, user):
+    def getLoggerArgs(self, response, mtd, parameter, user):
         status = response.StatusCode
         msg = response.Text
         response.close()
-        return ['Provider', mtd, code, parameter.Name, status, user, parameter.Url, msg]
+        return ['Provider', mtd, 201, parameter.Name, status, user, parameter.Url, msg]
 
     # Can be overwritten method
     def syncGroups(self, database, user, addressbook, pages, count):
