@@ -94,7 +94,7 @@ class Driver(unohelper.Base,
             self._logger.logprb(INFO, 'Driver', 'connect()', 113, location)
             connection = self._getDriver().connect(path, newinfos)
             version = connection.getMetaData().getDriverVersion()
-            handler.setListener(document, location)
+            handler.setListener(document)
             self._logger.logprb(INFO, 'Driver', 'connect()', 114, g_dbname, version, g_user)
             return connection
         except SQLException as e:

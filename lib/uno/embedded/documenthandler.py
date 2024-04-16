@@ -115,31 +115,29 @@ class DocumentHandler(unohelper.Base,
         self._logger.logprb(INFO, 'DocumentHandler', 'disposing()', 222, url)
 
     # DocumentHandler setter methods
-    def setListener(self, document, url):
+    def setListener(self, document):
         # FIXME: With OpenOffice there is no Document in the info
         # FIXME: parameter provided during the connection
         if document is None:
-            document = self._getDocument(url)
-        # FIXME: We want to add the StorageChangeListener only once
-        if not self._listening:
-            document.addStorageChangeListener(self)
-            self._listening = True
-        # FIXME: If storage has been changed the closeListener has been removed
-        document.addCloseListener(self)
+            document = self._getDocument()
+        if document is not None:
+            # FIXME: We want to add the StorageChangeListener only once
+            if not self._listening:
+                document.addStorageChangeListener(self)
+                self._listening = True
+            # FIXME: If storage has been changed the closeListener has been removed
+            document.addCloseListener(self)
 
     # DocumentHandler getter methods
     def getConnectionUrl(self, storage):
         with self._lock:
             exist = storage.hasElements()
-            print("DocumentHandler.getConnectionUrl() 1 Exist: %s - Path: %s" % (exist, self._path))
             sf = getSimpleFile(self._ctx)
             if not sf.exists(self._path):
                 sf.createFolder(self._path)
                 if exist:
-                    print("DocumentHandler.getConnectionUrl() 2 Exist: %s" % exist)
                     count = self._extractStorage(sf, storage, self._path)
                     self._logger.logprb(INFO, 'DocumentHandler', 'getConnectionUrl()', 231, count)
-                    print("DocumentHandler.getConnectionUrl() 2 Count: %s" % count)
             return self._getConnectionUrl(exist)
 
     # DocumentHandler private getter methods
@@ -168,13 +166,13 @@ class DocumentHandler(unohelper.Base,
         name, sep, extension = title.rpartition('.')
         return name if sep else extension
 
-    def _getDocument(self, url):
+    def _getDocument(self):
         document = None
         interface = 'com.sun.star.frame.XStorable'
         components = getDesktop(self._ctx).getComponents().createEnumeration()
         while components.hasMoreElements():
             component = components.nextElement()
-            if hasInterface(component, interface) and component.hasLocation() and component.getLocation() == url:
+            if hasInterface(component, interface) and component.hasLocation() and component.getLocation() == self._url:
                 document = component
                 break
         return document
