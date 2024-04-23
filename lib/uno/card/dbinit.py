@@ -27,6 +27,9 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
+from com.sun.star.sdbc.ColumnValue import NO_NULLS
+from com.sun.star.sdbc.ColumnValue import NULLABLE
+
 from com.sun.star.sdbc.DataType import INTEGER
 from com.sun.star.sdbc.DataType import SMALLINT
 from com.sun.star.sdbc.DataType import VARCHAR
@@ -38,10 +41,11 @@ from .unotool import checkVersion
 from .dbtool import createStaticTables
 from .dbtool import createStaticIndexes
 from .dbtool import createStaticForeignKeys
-from .dbtool import setStaticTable
 from .dbtool import createTables
 from .dbtool import createIndexes
 from .dbtool import createForeignKeys
+from .dbtool import executeQueries
+from .dbtool import executeSqlQueries
 from .dbtool import getConnectionInfos
 from .dbtool import getDataBaseTables
 from .dbtool import getDataBaseIndexes
@@ -53,20 +57,15 @@ from .dbtool import getTableNames
 from .dbtool import getTables
 from .dbtool import getIndexes
 from .dbtool import getForeignKeys
+from .dbtool import setStaticTable
 
-from .dbtool import getSequenceFromResult
-from .dbtool import getDataFromResult
-
-from .dbqueries import getSqlQuery
-
-from .dbconfig import g_version
 from .dbconfig import g_superuser
 from .dbconfig import g_view
 from .dbconfig import g_cardview
-from .dbconfig import g_bookview
-from .dbconfig import g_dba
 from .dbconfig import g_drvinfos
+from .dbconfig import g_csv
 
+from collections import OrderedDict
 import traceback
 
 
@@ -75,12 +74,12 @@ def getDataBaseConnection(ctx, url, user, pwd, new, infos=None):
         infos = getDriverInfos(ctx, url, g_drvinfos)
     return getDataSourceConnection(ctx, url, user, pwd, new, infos)
 
-def createDataBase(connection, odb, addressbook):
+def createDataBase(ctx, connection, odb, addressbook):
     tables = connection.getTables()
     statement = connection.createStatement()
     statics = createStaticTables(tables, **_getStaticTables())
     createStaticIndexes(tables)
-    createStaticForeignKeys(tables **_getForeignKeys())
+    createStaticForeignKeys(tables, *_getForeignKeys())
     setStaticTable(statement, statics, g_csv, True)
     _createTables(connection, statement, tables)
     _createIndexes(statement, tables)
@@ -100,84 +99,6 @@ def _createIndexes(statement, tables):
 
 def _createForeignKeys(statement, tables):
     createForeignKeys(tables, getDataBaseForeignKeys(statement, getForeignKeys()))
-
-def _getAddressbookColumns(ctx, connection):
-    columns = OrderedDict()
-    call = getDataSourceCall(ctx, connection, 'getColumns')
-    result = call.executeQuery()
-    while result.next():
-        index = result.getInt(1)
-        name = result.getString(2)
-        view = result.getString(3)
-        print("DataBase._getAddressbookColumns() Index: %s - Name: %s - View: %s" % (index, name, view))
-        if view is not None:
-            if view not in columns:
-                columns[view] = OrderedDict()
-            columns[view][name] = index
-    result.close()
-    call.close()
-    return columns
-
-
-def getTables1(ctx, connection, version=g_version):
-    tables = []
-    call = getDataSourceCall(ctx, connection, 'getTables')
-    for table in _getTableNames1(ctx, connection):
-        view = False
-        versioned = False
-        columns = []
-        primary = []
-        unique = []
-        constraint = []
-        call.setString(1, table)
-        result = call.executeQuery()
-        while result.next():
-            data = getDataFromResult(result)
-            view = data.get('View')
-            versioned = data.get('Versioned')
-            column = data.get('Column')
-            definition = '"%s" %s' % (column, data.get('Type'))
-            default = data.get('Default')
-            if default:
-                definition += ' DEFAULT %s' % default
-            options = data.get('Options')
-            if options:
-                definition += ' %s' % options
-            columns.append(definition)
-            if data.get('Primary'):
-                primary.append('"%s"' % column)
-            if data.get('Unique'):
-                unique.append({'Table': table, 'Column': column})
-            if data.get('ForeignTable') and data.get('ForeignColumn'):
-                constraint.append({'Table': table,
-                                   'Column': column,
-                                   'ForeignTable': data.get('ForeignTable'),
-                                   'ForeignColumn': data.get('ForeignColumn')})
-        if primary:
-            columns.append(getSqlQuery(ctx, 'getPrimayKey', primary))
-        for format in unique:
-            columns.append(getSqlQuery(ctx, 'getUniqueConstraint', format))
-        for format in constraint:
-            columns.append(getSqlQuery(ctx, 'getForeignConstraint', format))
-        if checkVersion(version, g_version) and versioned:
-            columns.append(getSqlQuery(ctx, 'getPeriodColumns'))
-        format = (table, ','.join(columns))
-        query = getSqlQuery(ctx, 'createTable', format)
-        if checkVersion(version, g_version) and versioned:
-            query += getSqlQuery(ctx, 'getSystemVersioning')
-        tables.append(query)
-        result.close()
-    call.close()
-    return tables
-
-def _getTableNames1(ctx, connection):
-    statement = connection.createStatement()
-    query = getSqlQuery(ctx, 'getTableNames')
-    result = statement.executeQuery(query)
-    tables = getSequenceFromResult(result)
-    result.close()
-    statement.close()
-    return tables
 
 def _getViews(ctx, connection, name):
     result = _getAddressbookColumns(ctx, connection)
@@ -225,6 +146,23 @@ def _getViews(ctx, connection, name):
     format['ViewTable'] = ' '.join(tab1)
     queries.append(q % format)
     return queries
+
+def _getAddressbookColumns(ctx, connection):
+    columns = OrderedDict()
+    call = getDataSourceCall(ctx, connection, 'getColumns')
+    result = call.executeQuery()
+    while result.next():
+        index = result.getInt(1)
+        name = result.getString(2)
+        view = result.getString(3)
+        print("DataBase._getAddressbookColumns() Index: %s - Name: %s - View: %s" % (index, name, view))
+        if view is not None:
+            if view not in columns:
+                columns[view] = OrderedDict()
+            columns[view][name] = index
+    result.close()
+    call.close()
+    return columns
 
 def _getQueries():
     return (('createSelectUser', None),
