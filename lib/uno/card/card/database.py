@@ -44,7 +44,6 @@ from ..dbtool import createDataSource
 from ..dbtool import createStaticTable
 from ..dbtool import currentDateTimeInTZ
 from ..dbtool import getConnectionInfo
-from ..dbtool import getDataBaseConnection
 from ..dbtool import getDataBaseUrl
 from ..dbtool import executeSqlQueries
 from ..dbtool import getDataFromResult
@@ -75,6 +74,7 @@ from ..dbconfig import g_csv
 from ..dbconfig import g_dotcode
 from ..dbconfig import g_version
 
+from ..dbinit import getDataBaseConnection
 from ..dbinit import getStaticTables
 from ..dbinit import getQueries
 from ..dbinit import getTables
@@ -92,14 +92,15 @@ class DataBase(object):
         self._statement = None
         self._fieldsMap = {}
         self._batchedCalls = OrderedDict()
-        self._addressbook = None
+        config = getConfiguration(ctx, g_identifier, False)
+        self._addressbook = configuration.getByName('AddressBookName')
         self._url = url
         odb = url + '.odb'
         new = not getSimpleFile(ctx).exists(odb)
-        connection = getDataSourceConnection(ctx, url, user, pwd, new)
+        connection = getDataBaseConnection(ctx, url, user, pwd, new)
         self._version = connection.getMetaData().getDriverVersion()
         if new and self.isUptoDate():
-            self._createDataBase(connection, odb)
+            createDataBase(connection, odb, self._addressbook)
         connection.close()
 
     @property

@@ -27,9 +27,28 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
+from com.sun.star.sdbc import INTEGER
+from com.sun.star.sdbc import SMALLINT
+from com.sun.star.sdbc import VARCHAR
+
 from .unotool import checkVersion
 
+from .dbtool import createStaticTables
+from .dbtool import createTables
+from .dbtool import createIndexes
+from .dbtool import createForeignKeys
+from .dbtool import getConnectionInfos
+from .dbtool import getDataBaseTables
+from .dbtool import getDataBaseIndexes
+from .dbtool import getDataBaseForeignKeys
 from .dbtool import getDataSourceCall
+from .dbtool import getDataSourceConnection
+from .dbtool import getDriverInfos
+from .dbtool import getTableNames
+from .dbtool import getTables
+from .dbtool import getIndexes
+from .dbtool import getForeignKeys
+
 from .dbtool import getSequenceFromResult
 from .dbtool import getDataFromResult
 
@@ -41,8 +60,60 @@ from .dbconfig import g_view
 from .dbconfig import g_cardview
 from .dbconfig import g_bookview
 from .dbconfig import g_dba
+from .dbconfig import g_drvinfos
 
 import traceback
+
+
+def getDataBaseConnection(ctx, url, user, pwd, new, infos=None):
+    if new:
+        infos = getDriverInfos(ctx, url, g_drvinfos)
+    return getDataSourceConnection(ctx, url, user, pwd, new, infos)
+
+def createDataBase(connection, odb, addressbook):
+    tables = connection.getTables()
+    statement = connection.createStatement()
+    createStaticTable(tables, statement, g_csv, True)
+    _createTables(connection, statement, tables)
+    _createIndexes(statement, tables)
+    _createForeignKeys(statement, tables)
+    #_createRoleAndPrivileges(statement, tables, connection.getGroups())
+
+    #tables = getTables(self._ctx, connection, self._version)
+    #executeSqlQueries(statement, tables)
+    #executeQueries(self._ctx, statement, getQueries())
+    executeQueries(ctx, statement, _getQueries())
+    views = _getViews(ctx, connection, addressbook)
+    executeSqlQueries(statement, views)
+    statement.close()
+    connection.getParent().DatabaseDocument.storeAsURL(odb, ())
+
+def _createTables(connection, statement, tables):
+    infos = getConnectionInfos(connection, 'AutoIncrementCreation', 'RowVersionCreation')
+    createTables(tables, getDataBaseTables(connection, statement, getTables(), getTableNames(), infos[0], infos[1]))
+
+def _createIndexes(statement, tables):
+    createIndexes(tables, getDataBaseIndexes(statement, getIndexes()))
+
+def _createForeignKeys(statement, tables):
+    createForeignKeys(tables, getDataBaseForeignKeys(statement, getForeignKeys()))
+
+def _getAddressbookColumns(ctx, connection):
+    columns = OrderedDict()
+    call = getDataSourceCall(ctx, connection, 'getColumns')
+    result = call.executeQuery()
+    while result.next():
+        index = result.getInt(1)
+        name = result.getString(2)
+        view = result.getString(3)
+        print("DataBase._getAddressbookColumns() Index: %s - Name: %s - View: %s" % (index, name, view))
+        if view is not None:
+            if view not in columns:
+                columns[view] = OrderedDict()
+            columns[view][name] = index
+    result.close()
+    call.close()
+    return columns
 
 
 def getTables(ctx, connection, version=g_version):
@@ -105,7 +176,8 @@ def _getTableNames(ctx, connection):
     statement.close()
     return tables
 
-def getViews(ctx, result, name):
+def _getViews(ctx, connection, name):
+    result = _getAddressbookColumns(ctx, connection)
     sel1 = []
     tab1 = []
     queries = []
@@ -151,6 +223,8 @@ def getViews(ctx, result, name):
     queries.append(q % format)
     return queries
 
+
+
 def getStaticTables():
     tables = ('Tables',
               'Columns',
@@ -161,7 +235,7 @@ def getStaticTables():
               'PropertyType')
     return tables
 
-def getQueries():
+def _getQueries():
     return (('createSelectUser', None),
             ('createInsertUser', None),
             ('createInsertBook', None),
@@ -199,3 +273,199 @@ def getQueries():
             ('createUpdateAddressbook', None),
             ('createUpdateGroup', None),
             ('createSelectCardProperties', None))
+
+def _getStaticTables():
+    return {'Resources':   {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Resource',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Path',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Name',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'View',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'Method',
+                                         'TypeName': 'SMALLINT',
+                                         'Type': 12,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'}),
+                            'PrimaryKeys': ('Resource', )},
+            'Columns':     {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Column',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Name',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS}),
+                            'PrimaryKeys': ('Column', )},
+            'TableColumn': {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Table',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Column',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'TypeName',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Type',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Scale',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'IsNullable',
+                                         'TypeName': 'INTEGER',
+                                         'Type': INTEGER,
+                                         'IsNullable': NO_NULLS,
+                                         'DefaultValue': '0'},
+                                        {'Name': 'DefaultValue',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'IsRowVersion',
+                                         'TypeName': 'BOOLEAN',
+                                         'Type': 16,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'IsAutoIncrement',
+                                         'TypeName': 'BOOLEAN',
+                                         'Type': 16,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'Primary',
+                                         'TypeName': 'BOOLEAN',
+                                         'Type': 16,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'}),
+                            'PrimaryKeys': ('Table', 'Column')},
+            'ForeignKeys': {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Table',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Column',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'ReferencedTable',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'RelatedColumn',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'UpdateRule',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'DeleteRule',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS})},
+            'Indexes':     {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Index',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Table',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Column',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Unique',
+                                         'TypeName': 'BOOLEAN',
+                                         'Type': 16,
+                                         'IsNullable': NO_NULLS,
+                                         'DefaultValue': 'TRUE'})},
+            'Privileges':  {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Table',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Column',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'Role',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Privilege',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS})},
+            'Settings':    {'CatalogName': 'PUBLIC',
+                            'SchemaName':  'PUBLIC',
+                            'Type':        'TEXT TABLE',
+                            'Columns': ({'Name': 'Id',
+                                         'TypeName': 'INTEGER',
+                                         'Type': 4,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Name',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Value1',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NO_NULLS},
+                                        {'Name': 'Value2',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'},
+                                        {'Name': 'Value3',
+                                         'TypeName': 'VARCHAR',
+                                         'Type': 12,
+                                         'Scale': 100,
+                                         'IsNullable': NULLABLE,
+                                         'DefaultValue': 'NULL'}),
+                            'PrimaryKeys': ('Id', )}}
+
