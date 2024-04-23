@@ -39,8 +39,15 @@ g_basename = 'dbqueries'
 
 def getSqlQuery(ctx, name, format=None):
 
+# Create User and Schema Query
+    if name == 'createUserSchema':
+        query = 'CREATE SCHEMA "%(Schema)s" AUTHORIZATION "%(Name)s";' % format
+
+    elif name == 'setUserSchema':
+        query = 'ALTER USER "%(Name)s" SET INITIAL SCHEMA "%(Schema)s";' % format
+
 # Create Dynamic View Queries
-    if name == 'createUserView':
+    elif name == 'createUserView':
         view = '''\
 CREATE VIEW IF NOT EXISTS "%(Schema)s"."%(View)s" AS
   SELECT %(Public)s."%(CardView)s".* FROM %(Public)s."%(CardView)s"
@@ -79,65 +86,7 @@ GRANT SELECT ON "%(Schema)s"."%(Name)s" TO "%(User)s";
     elif name == 'deleteView':
         query = 'DROP VIEW IF EXISTS "%(Schema)s"."%(OldName)s";' % format
 
-# Create User and Schema Query
-    elif name == 'createUser':
-        q = """CREATE USER "%(Name)s" PASSWORD '%(Password)s'"""
-        q += ' ADMIN;' if format.get('Admin') else ';'
-        query = q % format
-
-    elif name == 'createUserSchema':
-        query = 'CREATE SCHEMA "%(Schema)s" AUTHORIZATION "%(Name)s";' % format
-
-    elif name == 'setUserSchema':
-        query = 'ALTER USER "%(Name)s" SET INITIAL SCHEMA "%(Schema)s";' % format
-
-    elif name == 'setUserPassword':
-        query = """ALTER USER "%(Name)s" SET PASSWORD '%(Password)s'""" % format
-
-# Get last IDENTITY value that was inserted into a table by the current session
-    elif name == 'getIdentity':
-        query = 'CALL IDENTITY();'
-
-# Get Users and Privileges Query
-    elif name == 'getUsers':
-        query = 'SELECT * FROM INFORMATION_SCHEMA.SYSTEM_USERS'
-    elif name == 'getPrivileges':
-        query = 'SELECT * FROM INFORMATION_SCHEMA.TABLE_PRIVILEGES'
-    elif name == 'changePassword':
-        query = "SET PASSWORD '%s'" % format
-
 # Select Queries
-    # DataBase creation Select Queries
-    elif name == 'getTableNames':
-        query = 'SELECT "Name" FROM PUBLIC."Tables" ORDER BY "Table";'
-
-    elif name == 'getTables':
-        s1 = '"T"."Table" AS "TableId"'
-        s2 = '"C"."Column" AS "ColumnId"'
-        s3 = '"T"."Name" AS "Table"'
-        s4 = '"C"."Name" AS "Column"'
-        s5 = '"TC"."Type"'
-        s6 = '"TC"."Default"'
-        s7 = '"TC"."Options"'
-        s8 = '"TC"."Primary"'
-        s9 = '"TC"."Unique"'
-        s10 = '"TC"."ForeignTable" AS "ForeignTableId"'
-        s11 = '"TC"."ForeignColumn" AS "ForeignColumnId"'
-        s12 = '"T2"."Name" AS "ForeignTable"'
-        s13 = '"C2"."Name" AS "ForeignColumn"'
-        s14 = '"T"."View"'
-        s15 = '"T"."Versioned"'
-        s = (s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14,s15)
-        f1 = '"Tables" AS "T"'
-        f2 = 'JOIN "TableColumn" AS "TC" ON "T"."Table" = "TC"."Table"'
-        f3 = 'JOIN "Columns" AS "C" ON "TC"."Column" = "C"."Column"'
-        f4 = 'LEFT JOIN "Tables" AS "T2" ON "TC"."ForeignTable" = "T2"."Table"'
-        f5 = 'LEFT JOIN "Columns" AS "C2" ON "TC"."ForeignColumn" = "C2"."Column"'
-        w = '"T"."Name" = ?'
-        f = (f1, f2, f3, f4, f5)
-        p = (', '.join(s), ' '.join(f), w)
-        query = 'SELECT %s FROM %s WHERE %s' % p
-
     elif name == 'getViews':
         s1 = '"T1"."Table" AS "TableId"'
         s2 = '"TL"."Label" AS "LabelId"'

@@ -38,6 +38,7 @@ from com.sun.star.sdb.CommandType import QUERY
 from com.sun.star.sdbc.DataType import VARCHAR
 
 from ..dbtool import Array
+from ..dbtool import createUser
 from ..dbtool import currentDateTimeInTZ
 from ..dbtool import getDataFromResult
 from ..dbtool import getDataSourceCall
@@ -177,24 +178,21 @@ class DataBase(object):
         return metadata, books
 
     def createUser(self, schema, userid, name, password):
-        format = {'Public': 'PUBLIC',
-                  'Schema': schema,
-                  'User': userid,
-                  'Name': name,
-                  'Password': password,
-                  'CardView': g_cardview,
-                  'View': self._getViewName(),
-                  'Admin': g_admin}
-        statement = self.Connection.createStatement()
-        query = getSqlQuery(self._ctx, 'createUser', format)
-        status = statement.executeUpdate(query)
-        query = getSqlQuery(self._ctx, 'createUserSchema', format)
-        statement.execute(query)
-        query = getSqlQuery(self._ctx, 'setUserSchema', format)
-        statement.execute(query)
-        query = getSqlQuery(self._ctx, 'createUserView', format)
-        statement.execute(query)
-        statement.close()
+        if createUser(self.Connection, name, password):
+            statement = self.Connection.createStatement()
+            format = {'Public': 'PUBLIC',
+                      'Schema': schema,
+                      'User': userid,
+                      'Name': name,
+                      'CardView': g_cardview,
+                      'View': self._getViewName()}
+            query = getSqlQuery(self._ctx, 'createUserSchema', format)
+            statement.execute(query)
+            query = getSqlQuery(self._ctx, 'setUserSchema', format)
+            statement.execute(query)
+            query = getSqlQuery(self._ctx, 'createUserView', format)
+            statement.execute(query)
+            statement.close()
 
     def selectUser(self, server, name):
         metadata = None
