@@ -70,28 +70,20 @@ import traceback
 
 class DataBase(object):
     def __init__(self, ctx, url, user='', pwd=''):
-        try:
-            print("DataBase.__init__() 1")
-            self._ctx = ctx
-            self._statement = None
-            self._fieldsMap = {}
-            self._batchedCalls = OrderedDict()
-            config = getConfiguration(ctx, g_identifier, False)
-            self._addressbook = config.getByName('AddressBookName')
-            self._url = url
-            odb = url + '.odb'
-            new = not getSimpleFile(ctx).exists(odb)
-            print("DataBase.__init__() 2")
-            connection = getDataBaseConnection(ctx, url, user, pwd, new)
-            print("DataBase.__init__() 3")
-            self._version = connection.getMetaData().getDriverVersion()
-            if new and self.isUptoDate():
-                print("DataBase.__init__() 4")
-                createDataBase(ctx, connection, odb, self._addressbook)
-                print("DataBase.__init__() 5")
-            connection.close()
-        except Exception as e:
-            traceback.print_exc()
+        self._ctx = ctx
+        self._statement = None
+        self._fieldsMap = {}
+        self._batchedCalls = OrderedDict()
+        config = getConfiguration(ctx, g_identifier, False)
+        self._addressbook = config.getByName('AddressBookName')
+        self._url = url
+        odb = url + '.odb'
+        new = not getSimpleFile(ctx).exists(odb)
+        connection = getDataBaseConnection(ctx, url, user, pwd, new)
+        self._version = connection.getMetaData().getDriverVersion()
+        if new and self.isUptoDate():
+            createDataBase(ctx, connection, odb, self._addressbook)
+        connection.close()
 
     @property
     def Connection(self):
