@@ -121,23 +121,6 @@ SELECT "Name" FROM "Fields" WHERE "Table"='Loop' AND "Column"=1;'''
     elif name == 'updateAddressbookToken':
         query = 'UPDATE "Books" SET "Token"=?,"Modified"=DEFAULT WHERE "Book"=?'
 
-# Insert Queries
-    elif name == 'insertSuperUser':
-        q = """\
-INSERT INTO PUBLIC."Users" ("Uri","Scheme","Server","Path","Name") VALUES ('%s','%s','%s','%s','%s');
-"""
-        query = q % format
-
-    elif name == 'insertSuperAdressbook':
-        query = """\
-INSERT INTO PUBLIC."Books" ("User","Uri","Name","Tag","Token") VALUES (0,'/','admin','#','#');
-"""
-
-    elif name == 'insertSuperGroup':
-        query = """\
-INSERT INTO PUBLIC."Groups" ("Book","Uri","Name") VALUES (0,'/','#');
-"""
-
 # Create Procedure Query
     elif name == 'createSelectUser':
         query = """\
@@ -486,26 +469,6 @@ CREATE PROCEDURE "SelectCardProperties"()
     OPEN RSLT;
   END"""
 
-    # The getColumnIds query allows to obtain all the columns available from parser properties.
-    elif name == 'createSelectColumnIds':
-        query = """\
-CREATE PROCEDURE "SelectColumnIds"()
-  SPECIFIC "SelectColumnIds_1"
-  READS SQL DATA
-  DYNAMIC RESULT SETS 1
-  BEGIN ATOMIC
-    DECLARE Rslt CURSOR WITH RETURN FOR 
-      SELECT ARRAY_AGG(R."Name" || P."Path" || COALESCE(T."Path",'') 
-                       ORDER BY R."Resource", P."Property", T."Type")
-      FROM "Resources" AS R 
-      INNER JOIN "Properties" AS P ON R."Resource"=P."Resource" 
-      LEFT JOIN "PropertyType" AS PT ON P."Property"=PT."Property" 
-      LEFT JOIN "Types" AS T ON PT."Type"=T."Type" 
-      WHERE P."Name" IS NOT NULL 
-      FOR READ ONLY;
-    OPEN Rslt;
-  END"""
-
     # The getColumns query allows to obtain all the columns available from parser properties.
     elif name == 'createSelectColumns':
         query = """\
@@ -774,17 +737,6 @@ CREATE PROCEDURE "InsertGroup"(IN AID INTEGER,
     SET GID = IDENTITY();
   END"""
 
-    elif name == 'createMergeCardGroup':
-        query = """\
-CREATE PROCEDURE "MergeCardGroup"(IN Cid INTEGER,
-                                  IN Gid INTEGER)
-  SPECIFIC "MergeCardGroup_1"
-  MODIFIES SQL DATA
-  BEGIN ATOMIC
-    DELETE FROM "GroupCards" WHERE "Card"=Cid;
-    INSERT INTO "GroupCards" ("Group","Card") VALUES (Gid,Cid);
-  END"""
-
     elif name == 'createMergeCardGroups':
         query = """\
 CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
@@ -824,8 +776,6 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
         query = 'CALL "DeleteCard"(?)'
     elif name == 'getColumns':
         query = 'CALL "SelectColumns"()'
-    elif name == 'getColumnIds':
-        query = 'CALL "SelectColumnIds"()'
     elif name == 'getPaths':
         query = 'CALL "SelectPaths"()'
     elif name == 'getLists':
@@ -866,8 +816,6 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
         query = 'CALL "InitGroups"(?,?,?,?,?)'
     elif name == 'insertGroup':
         query = 'CALL "InsertGroup"(?,?,?,?)'
-    elif name == 'mergeCardGroup':
-        query = 'CALL "MergeCardGroup"(?,?)'
     elif name == 'mergeCardGroups':
         query = 'CALL "MergeCardGroups"(?,?,?)'
     elif name == 'mergeGroup':
