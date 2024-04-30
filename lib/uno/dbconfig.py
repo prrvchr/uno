@@ -38,8 +38,6 @@ g_version = '2.5.1'
 g_role = 'FrontOffice'
 g_dba = 'SA'
 g_superuser = ('#', 'https://', 'localhost', '/', 'admin')
-g_schema = '%i'
-g_user = '%i'
 
 g_dotcode = 183
 
@@ -47,19 +45,16 @@ g_dotcode = 183
 g_cardview = 'CardView'
 g_bookview = 'BookView'
 g_usercolumn = 'User'
-g_view = {'UserTable': 'Users',
-          'UserColumn': g_usercolumn,
-          'BookCardTable': 'BookCards',
-          'CardTable': 'Cards',
+
+g_catalog = 'PUBLIC'
+g_schema  = 'PUBLIC'
+
+g_view = {'CardTable': f'{g_catalog}.{g_schema}."Cards"',
           'CardColumn': 'Card',
           'CardUri': 'Uri',
-          'BookTable': 'Books',
-          'BookColumn': 'Book',
-          'DataTable': 'CardValues',
+          'DataTable': f'{g_catalog}.{g_schema}."CardValues"',
           'DataColumn': 'Column',
-          'DataValue': 'Value',
-          'Admin': g_dba}
-
+          'DataValue': 'Value'}
 
 g_bookmark = 'Bookmark'
 

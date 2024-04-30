@@ -59,6 +59,8 @@ from .dbtool import getIndexes
 from .dbtool import getForeignKeys
 from .dbtool import setStaticTable
 
+from .dbconfig import g_catalog
+from .dbconfig import g_schema
 from .dbconfig import g_superuser
 from .dbconfig import g_view
 from .dbconfig import g_cardview
@@ -75,11 +77,12 @@ def getDataBaseConnection(ctx, url, user, pwd, new, infos=None):
     return getDataSourceConnection(ctx, url, user, pwd, new, infos)
 
 def createDataBase(ctx, connection, odb, addressbook):
+    # XXX Creation order are very important here...
     tables = connection.getTables()
     statement = connection.createStatement()
-    statics = createStaticTables(tables, **_getStaticTables())
-    createStaticIndexes(tables)
-    createStaticForeignKeys(tables, *_getForeignKeys())
+    statics = createStaticTables(g_catalog, g_schema, tables, **_getStaticTables())
+    createStaticIndexes(g_catalog, g_schema, tables)
+    createStaticForeignKeys(g_catalog, g_schema, tables, *_getForeignKeys())
     setStaticTable(statement, statics, g_csv, True)
     _createTables(connection, statement, tables)
     _createIndexes(statement, tables)
@@ -107,24 +110,24 @@ def _getViews(ctx, connection, name):
     queries = []
     format = g_view
 
-    q = 'CREATE VIEW IF NOT EXISTS "%(ViewName)s" AS SELECT %(ViewSelect)s FROM "%(CardTable)s" %(ViewTable)s'
+    q = 'SELECT %(ViewSelect)s FROM %(CardTable)s %(ViewTable)s'
 
-    t1 = 'LEFT JOIN "%(ViewName)s" ON "%(CardTable)s"."%(CardColumn)s"="%(ViewName)s"."%(CardColumn)s"'
-    t2 = 'LEFT JOIN "%(DataTable)s" AS "%(AliasNum)s" ON "%(CardTable)s"."%(CardColumn)s"="%(AliasNum)s"."%(CardColumn)s" '
+    t1 = 'LEFT JOIN %(ViewName)s ON %(CardTable)s."%(CardColumn)s" = %(ViewName)s."%(CardColumn)s"'
+    t2 = 'LEFT JOIN %(DataTable)s AS "%(AliasNum)s" ON %(CardTable)s."%(CardColumn)s"="%(AliasNum)s"."%(CardColumn)s" '
     t2 += 'AND "%(AliasNum)s"."%(DataColumn)s"=%(ColumnId)s'
 
-    s1 = '"%(ViewName)s"."%(ColumnName)s"'
+    s1 = '%(ViewName)s."%(ColumnName)s"'
     s2 = '"%(AliasNum)s"."%(DataValue)s" AS "%(ColumnName)s"'
-    s3 = '"%(CardTable)s"."%(CardColumn)s"'
-    s4 = '"%(CardTable)s"."Created","%(CardTable)s"."Modified"'
-    s5 = '"%(CardTable)s"."%(CardUri)s"'
+    s3 = '%(CardTable)s."%(CardColumn)s"'
+    s4 = '%(CardTable)s."Created", %(CardTable)s."Modified"'
+    s5 = '%(CardTable)s."%(CardUri)s"'
 
     for view, columns in result.items():
         i = 0
         col2 = columns.keys()
         sel2 = []
         tab2 = []
-        format['ViewName'] = view
+        format['ViewName'] = f'{g_catalog}.{g_schema}."{view}"'
         for column, index in columns.items():
             format['ColumnName'] = column
             format['ColumnId'] = index
@@ -204,92 +207,94 @@ def _getQueries():
             ('createSelectCardProperties', None))
 
 def _getStaticTables():
-    return {'Resources':    {'CatalogName': 'PUBLIC',
-                             'SchemaName':  'PUBLIC',
-                             'Type':        'TEXT TABLE',
-                             'Columns': ({'Name': 'Resource',
-                                          'TypeName': 'INTEGER',
-                                          'Type': INTEGER,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Path',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Name',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NULLABLE,
-                                          'DefaultValue': 'NULL'},
-                                         {'Name': 'View',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NULLABLE,
-                                          'DefaultValue': 'NULL'},
-                                         {'Name': 'Method',
-                                          'TypeName': 'SMALLINT',
-                                          'Type': SMALLINT,
-                                          'IsNullable': NULLABLE,
-                                          'DefaultValue': 'NULL'}),
-                             'PrimaryKeys': ('Resource', )},
-            'Properties':   {'CatalogName': 'PUBLIC',
-                             'SchemaName':  'PUBLIC',
-                             'Type':        'TEXT TABLE',
-                             'Columns': ({'Name': 'Property',
-                                          'TypeName': 'INTEGER',
-                                          'Type': INTEGER,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Resource',
-                                          'TypeName': 'INTEGER',
-                                          'Type': INTEGER,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Path',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Name',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NULLABLE,
-                                          'DefaultValue': 'NULL'}),
-                             'PrimaryKeys': ('Property', )},
-            'Types':        {'CatalogName': 'PUBLIC',
-                             'SchemaName':  'PUBLIC',
-                             'Type':        'TEXT TABLE',
-                             'Columns': ({'Name': 'Type',
-                                          'TypeName': 'INTEGER',
-                                          'Type': INTEGER,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Path',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NO_NULLS},
-                                         {'Name': 'Name',
-                                          'TypeName': 'VARCHAR',
-                                          'Type': VARCHAR,
-                                          'Scale': 100,
-                                          'IsNullable': NULLABLE,
-                                          'DefaultValue': 'NULL'}),
-                             'PrimaryKeys': ('Type', )},
-            'PropertyType': {'CatalogName': 'PUBLIC',
-                             'SchemaName':  'PUBLIC',
-                             'Type':        'TEXT TABLE',
-                             'Columns': ({'Name': 'Property',
-                                          'TypeName': 'INTEGER',
-                                          'Type': 4,
-                                          'IsNullable': NO_NULLS},
+    tables = OrderedDict()
+    tables['Resources'] =    {'CatalogName': g_catalog,
+                              'SchemaName':  g_schema,
+                              'Type':        'TEXT TABLE',
+                              'Columns': ({'Name': 'Resource',
+                                           'TypeName': 'INTEGER',
+                                           'Type': INTEGER,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Path',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Name',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NULLABLE,
+                                           'DefaultValue': 'NULL'},
+                                          {'Name': 'View',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NULLABLE,
+                                           'DefaultValue': 'NULL'},
+                                          {'Name': 'Method',
+                                           'TypeName': 'SMALLINT',
+                                           'Type': SMALLINT,
+                                           'IsNullable': NULLABLE,
+                                           'DefaultValue': 'NULL'}),
+                              'PrimaryKeys': ('Resource', )}
+    tables['Properties'] =   {'CatalogName': g_catalog,
+                              'SchemaName':  g_schema,
+                              'Type':        'TEXT TABLE',
+                              'Columns': ({'Name': 'Property',
+                                           'TypeName': 'INTEGER',
+                                           'Type': INTEGER,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Resource',
+                                           'TypeName': 'INTEGER',
+                                           'Type': INTEGER,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Path',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Name',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NULLABLE,
+                                           'DefaultValue': 'NULL'}),
+                              'PrimaryKeys': ('Property', )}
+    tables['Types'] =        {'CatalogName': g_catalog,
+                              'SchemaName':  g_schema,
+                              'Type':        'TEXT TABLE',
+                              'Columns': ({'Name': 'Type',
+                                           'TypeName': 'INTEGER',
+                                           'Type': INTEGER,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Path',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NO_NULLS},
+                                          {'Name': 'Name',
+                                           'TypeName': 'VARCHAR',
+                                           'Type': VARCHAR,
+                                           'Scale': 100,
+                                           'IsNullable': NULLABLE,
+                                           'DefaultValue': 'NULL'}),
+                              'PrimaryKeys': ('Type', )}
+    tables['PropertyType'] = {'CatalogName': g_catalog,
+                              'SchemaName':  g_schema,
+                              'Type':        'TEXT TABLE',
+                              'Columns': ({'Name': 'Property',
+                                           'TypeName': 'INTEGER',
+                                           'Type': 4,
+                                           'IsNullable': NO_NULLS},
                                           {'Name': 'Type',
                                            'TypeName': 'INTEGER',
                                            'Type': 4,
-                                           'IsNullable': NO_NULLS})}}
+                                           'IsNullable': NO_NULLS})}
+    return tables
 
 def _getForeignKeys():
-    return (('PUBLIC.PUBLIC.Properties',   'Resource', 'PUBLIC.PUBLIC.Resources',  'Resource', CASCADE, CASCADE),
-            ('PUBLIC.PUBLIC.PropertyType', 'Property', 'PUBLIC.PUBLIC.Properties', 'Property', CASCADE, CASCADE),
-            ('PUBLIC.PUBLIC.PropertyType', 'Type',     'PUBLIC.PUBLIC.Types',      'Type',     CASCADE, CASCADE))
+    return ((f'{g_catalog}.{g_schema}.Properties',   'Resource', f'{g_catalog}.{g_schema}.Resources',  'Resource', CASCADE, CASCADE),
+            (f'{g_catalog}.{g_schema}.PropertyType', 'Property', f'{g_catalog}.{g_schema}.Properties', 'Property', CASCADE, CASCADE),
+            (f'{g_catalog}.{g_schema}.PropertyType', 'Type',     f'{g_catalog}.{g_schema}.Types',      'Type',     CASCADE, CASCADE))
 
