@@ -169,10 +169,10 @@ def _getProcedures():
     for name in ('SelectUser', 'InsertUser', 'InsertBook', 'UpdateAddressbookName',
                  'MergeCard', 'MergeGroup', 'MergeGroupMembers', 'DeleteCard',
                  'UpdateCardSync', 'GetLastCardSync', 'GetLastBookSync',
-                 'GetLastGroupSync', 'SelectChangedCards', 'SelectColumns',
+                 'GetLastGroupSync', 'SelectChangedCards', 'SelectColumns', 'SelectColumnIds'
                  'SelectPaths', 'SelectLists', 'SelectTypes', 'SelectMaps',
                  'SelectTmps', 'SelectFields', 'SelectGroups', 'SelectCardGroup',
-                 'InitGroups', 'InsertGroup', 'MergeCardValue', 'MergeCardData',
+                 'InitGroups', 'InsertGroup', 'MergeCardValue', 'MergeCardData', 'MergeCardGroup',
                  'MergeCardGroups', 'SelectChangedBooks', 'SelectChangedGroups',
                  'UpdateBookSync', 'UpdateGroupSync', 'SelectCardProperties'):
         yield name
