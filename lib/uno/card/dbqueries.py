@@ -711,7 +711,7 @@ CREATE PROCEDURE "InitGroups"(IN Book INTEGER,
              VALUES vals.x,vals.y,vals.z;
       SET Index = Index + 1;
     END WHILE;
-    SELECT JSON_ARRAYAGG(JSON_OBJECT('Name': "Name", 'Group':"Group")) INTO TmpToAdd FROM "Groups" WHERE "Book" = Book AND "Uri" IN(UNNEST(Uris));
+    SELECT JSON_ARRAYAGG(JSON_OBJECT('NewName': "Name", 'Item':"Group")) INTO TmpToAdd FROM "Groups" WHERE "Book" = Book AND "Uri" IN(UNNEST(Uris));
     SET ViewToRemove = TmpToRemove;
     SET ViewToAdd = TmpToAdd;
   END"""

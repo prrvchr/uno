@@ -348,6 +348,20 @@ class DataBase(object):
         call.close()
         return book
 
+    def initGroupView(self, user, remove, add):
+        schema = user.getSchema()
+        if remove:
+            for item in remove:
+                self._deleteUserView(g_catalog, schema, item.get('OldName'))
+        if add:
+            for item in add:
+                view = item.get('NewName')
+                item['Catalog'] = g_catalog
+                item['Schema'] = g_schema
+                command = getSqlQuery(self._ctx, 'getGroupViewCommand', item)
+                self._createUserView(g_catalog, schema, view, command, CheckOption.CASCADE)
+                self._grantPrivileges(g_catalog, schema, view, user.Name, PrivilegeObject.TABLE, 1)
+
     def updateAddressbookName(self, addressbook, name):
         call = self._getCall('updateAddressbookName')
         call.setInt(1, addressbook)
