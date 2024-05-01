@@ -380,14 +380,14 @@ CREATE PROCEDURE "UpdateGroupSync"(IN USERID INTEGER,
     UPDATE "Users" SET "GroupSync" = LAST WHERE "User" = USERID;
   END"""
 
-    elif name == 'createGetLastUserSync':
+    elif name == 'createGetLastCardSync':
         query = """\
-CREATE PROCEDURE "GetLastUserSync"(OUT FIRST TIMESTAMP(6) WITH TIME ZONE)
-  SPECIFIC "GetLastUserSync_1"
+CREATE PROCEDURE "GetLastCardSync"(OUT FIRST TIMESTAMP(6) WITH TIME ZONE)
+  SPECIFIC "GetLastCardSync_1"
   READS SQL DATA
   BEGIN ATOMIC
     DECLARE TMP TIMESTAMP(6) WITH TIME ZONE;
-    SELECT "Created" INTO TMP FROM "Users" WHERE "User" = 0;
+    SELECT MIN("CardSync") INTO TMP FROM "Users";
     SET FIRST = TMP;
   END"""
 
@@ -430,13 +430,13 @@ CREATE PROCEDURE "SelectChangedCards"(IN FIRST TIMESTAMP(6) WITH TIME ZONE,
     OPEN RSLT;
   END"""
 
-    elif name == 'createUpdateUser':
+    elif name == 'createUpdateCardSync':
         query = """\
-CREATE PROCEDURE "UpdateUser"(IN LAST TIMESTAMP(6) WITH TIME ZONE)
-  SPECIFIC "UpdateUser_1"
+CREATE PROCEDURE "UpdateCardSync"(IN LAST TIMESTAMP(6) WITH TIME ZONE)
+  SPECIFIC "UpdateCardSync_1"
   MODIFIES SQL DATA
   BEGIN ATOMIC
-    UPDATE "Users" SET "Created" = LAST WHERE "User" = 0;
+    UPDATE "Users" SET "CardSync" = LAST;
   END"""
 
     elif name == 'createSelectCardProperties':
@@ -794,12 +794,12 @@ CREATE PROCEDURE "MergeCardGroups"(IN Book INTEGER,
         query = 'CALL "UpdateBookSync"(?,?)'
     elif name == 'updateGroupSync':
         query = 'CALL "UpdateGroupSync"(?,?)'
-    elif name == 'getLastUserSync':
-        query = 'CALL "GetLastUserSync"(?)'
+    elif name == 'getLastCardSync':
+        query = 'CALL "GetLastCardSync"(?)'
     elif name == 'getChangedCards':
         query = 'CALL "SelectChangedCards"(?,?)'
-    elif name == 'updateUser':
-        query = 'CALL "UpdateUser"(?)'
+    elif name == 'updateCardSync':
+        query = 'CALL "UpdateCardSync"(?)'
     elif name == 'getSessionId':
         query = 'CALL SESSION_ID()'
     elif name == 'getCardGroup':

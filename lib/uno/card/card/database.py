@@ -235,7 +235,7 @@ class DataBase(object):
         return tuple(fields)
 
     def initAddressbooks(self, user):
-        start = self._getLastSync(user, 'BookSync')
+        start = self.getLastSync('BookSync', user)
         stop = currentDateTimeInTZ()
         for args in self._selectChangedItems(user, start, stop, 'Books'):
             self._initUserView('Book', *args)
@@ -271,7 +271,7 @@ class DataBase(object):
         call.close()
 
     def syncGroups(self, user):
-        start = self._getLastSync(user, 'GroupSync')
+        start = self.getLastSync('GroupSync', user)
         stop = currentDateTimeInTZ()
         for args in self._selectChangedItems(user, start, stop, 'Groups'):
             self._initUserView('Group', *args)
@@ -292,11 +292,14 @@ class DataBase(object):
         result.close()
         call.close()
 
-    def _getLastSync(self, user, method):
+    def getLastSync(self, method, user=None):
+        i = 1
         call = self._getCall('getLast%s' % method)
-        call.setInt(1, user.Id)
+        if user is not None:
+            call.setInt(i, user.Id)
+            i += 1
         call.execute()
-        start = call.getObject(2, None)
+        start = call.getObject(i, None)
         call.close()
         return start
 
@@ -379,15 +382,8 @@ class DataBase(object):
         self._setBatchModeOff()
         return count
 
-    def getLastUserSync(self):
-        call = self._getCall('getLastUserSync')
-        call.execute()
-        start = call.getObject(1, None)
-        call.close()
-        return start
-
-    def updateUserSync(self, timestamp):
-        call = self._getCall('updateUser')
+    def updateCardSync(self, timestamp):
+        call = self._getCall('updateCardSync')
         call.setObject(1, timestamp)
         call.execute()
         call.close()

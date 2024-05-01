@@ -82,7 +82,7 @@ class Replicator(Thread):
                 users, pages, total = self._syncCard(logger)
                 logger.logprb(INFO, cls, '_syncCard()', 103, users, pages, total)
                 if total > 0:
-                    self._provider.parseCard(self._database)
+                    count = self._provider.parseCard(self._database)
                     if self._provider.supportGroup():
                         users, pages, total = self._syncGroup(logger)
                         logger.logprb(INFO, cls, '_syncGroup()', 104, users, pages, total)
