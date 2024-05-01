@@ -37,7 +37,6 @@ g_csv = '%s.csv;fs=|;ignore_first=true;encoding=UTF-8;quoted=true'
 g_version = '2.5.1'
 g_role = 'FrontOffice'
 g_dba = 'SA'
-g_superuser = ('#', 'https://', 'localhost', '/', 'admin')
 
 g_dotcode = 183
 
@@ -45,18 +44,12 @@ g_dotcode = 183
 g_catalog = 'PUBLIC'
 g_schema  = 'PUBLIC'
 
-g_cardview = 'CardView'
-g_bookview = 'BookView'
-g_usercolumn = 'User'
-
-g_view = {'CardTable': f'{g_catalog}.{g_schema}."Cards"',
+g_view = {'CardTable':  f'{g_catalog}.{g_schema}."Cards"',
           'CardColumn': 'Card',
-          'CardUri': 'Uri',
-          'DataTable': f'{g_catalog}.{g_schema}."CardValues"',
+          'CardUri':    'Uri',
+          'DataTable':  f'{g_catalog}.{g_schema}."CardValues"',
           'DataColumn': 'Column',
-          'DataValue': 'Value'}
-
-g_bookmark = 'Bookmark'
+          'DataValue':  'Value'}
 
 # XXX: If we want to be able to create DataBase we need to get some
 # XXX: DriverPropertyInfo from the driver. Here is the necessary information

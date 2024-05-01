@@ -34,8 +34,9 @@ from com.sun.star.sdbc.DataType import INTEGER
 from com.sun.star.sdbc.DataType import SMALLINT
 from com.sun.star.sdbc.DataType import VARCHAR
 
-from com.sun.star.sdbcx import CheckOption
 from com.sun.star.sdbc import KeyRule
+
+from com.sun.star.sdbcx import CheckOption
 
 from .unotool import checkVersion
 
@@ -47,7 +48,6 @@ from .dbtool import createIndexes
 from .dbtool import createForeignKeys
 from .dbtool import createViews
 from .dbtool import executeQueries
-from .dbtool import executeSqlQueries
 from .dbtool import getConnectionInfos
 from .dbtool import getDataBaseTables
 from .dbtool import getDataBaseIndexes
@@ -63,9 +63,7 @@ from .dbtool import setStaticTable
 
 from .dbconfig import g_catalog
 from .dbconfig import g_schema
-from .dbconfig import g_superuser
 from .dbconfig import g_view
-from .dbconfig import g_cardview
 from .dbconfig import g_drvinfos
 from .dbconfig import g_csv
 
@@ -78,7 +76,7 @@ def getDataBaseConnection(ctx, url, user, pwd, new, infos=None):
         infos = getDriverInfos(ctx, url, g_drvinfos)
     return getDataSourceConnection(ctx, url, user, pwd, new, infos)
 
-def createDataBase(ctx, connection, odb, addressbook):
+def createDataBase(ctx, connection, odb):
     # XXX Creation order are very important here...
     tables = connection.getTables()
     statement = connection.createStatement()
@@ -90,7 +88,7 @@ def createDataBase(ctx, connection, odb, addressbook):
     _createIndexes(statement, tables)
     _createForeignKeys(statement, tables)
     executeQueries(ctx, statement, _getProcedures(), 'create%s')
-    views = _getViews(ctx, connection, g_catalog, g_schema, g_cardview, g_view, CheckOption.CASCADE)
+    views = _getViews(ctx, connection, g_catalog, g_schema, 'CardView', g_view, CheckOption.CASCADE)
     createViews(connection.getViews(), views)
     statement.close()
     connection.getParent().DatabaseDocument.storeAsURL(odb, ())
@@ -170,13 +168,13 @@ def _getAddressbookColumns(ctx, connection):
 def _getProcedures():
     for name in ('SelectUser', 'InsertUser', 'InsertBook', 'UpdateAddressbookName',
                  'MergeCard', 'MergeGroup', 'MergeGroupMembers', 'DeleteCard',
-                 'UpdateUser', 'GetLastUserSync', 'GetLastAddressbookSync',
+                 'UpdateUser', 'GetLastUserSync', 'GetLastBookSync',
                  'GetLastGroupSync', 'SelectChangedCards', 'SelectColumns',
                  'SelectPaths', 'SelectLists', 'SelectTypes', 'SelectMaps',
                  'SelectTmps', 'SelectFields', 'SelectGroups', 'SelectCardGroup',
                  'InitGroups', 'InsertGroup', 'MergeCardValue', 'MergeCardData',
-                 'MergeCardGroups', 'SelectChangedAddressbooks', 'SelectChangedGroups',
-                 'UpdateAddressbook', 'UpdateGroup', 'SelectCardProperties'):
+                 'MergeCardGroups', 'SelectChangedBooks', 'SelectChangedGroups',
+                 'UpdateBookSync', 'UpdateGroupSync', 'SelectCardProperties'):
         yield name
 
 def _getStaticTables():

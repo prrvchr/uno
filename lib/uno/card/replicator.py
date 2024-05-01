@@ -143,9 +143,9 @@ class Replicator(Thread):
                         pages, count, args = self._provider.syncGroups(self._database, user, book, pages, count)
                         if args:
                             logger.logprb(SEVERE, *args)
+                        elif not self._canceled:
+                            self._database.syncGroups(user)
                     logger.logprb(INFO, cls, mtd, 123, user.Name)
-            if not self._canceled:
-                self._database.syncGroups()
         except UnoException as e:
             logger.logprb(SEVERE, cls, mtd, 124, e.Message)
         except Exception as e:
