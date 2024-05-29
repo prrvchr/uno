@@ -166,7 +166,6 @@ class Driver(unohelper.Base,
         configuration = getConfiguration(self._ctx, '/org.openoffice.Setup/Product')
         name = configuration.getByName('ooName')
         version = configuration.getByName('ooSetupVersion')
-        print("Driver._checkLibreOffice() version: %s" % version)
         if not checkVersion(version, g_lover):
             self._logException(124, name, version, ' ', name, g_lover)
             raise self._getException(1001, None, 122, 124, name, version, '\n', name, g_lover)
