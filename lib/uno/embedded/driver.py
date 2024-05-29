@@ -45,6 +45,7 @@ from .unotool import createService
 from .unotool import getConfiguration
 from .unotool import getExtensionVersion
 from .unotool import getPropertyValueSet
+from .unotool import getResourceLocation
 
 from .logger import getLogger
 
@@ -61,6 +62,7 @@ from .configuration import g_protocol
 from .configuration import g_url
 from .configuration import g_user
 from .configuration import g_lover
+from .configuration import g_driver
 
 import traceback
 
@@ -164,6 +166,7 @@ class Driver(unohelper.Base,
         configuration = getConfiguration(self._ctx, '/org.openoffice.Setup/Product')
         name = configuration.getByName('ooName')
         version = configuration.getByName('ooSetupVersion')
+        print("Driver._checkLibreOffice() version: %s" % version)
         if not checkVersion(version, g_lover):
             self._logException(124, name, version, ' ', name, g_lover)
             raise self._getException(1001, None, 122, 124, name, version, '\n', name, g_lover)
@@ -174,6 +177,9 @@ class Driver(unohelper.Base,
         newinfos = {'Url': g_url, 'ConnectionService': service}
         if g_user:
             newinfos['user'] = g_user
+        if g_driver:
+            path = getResourceLocation(self._ctx, g_identifier, g_driver)
+            newinfos['JavaDriverClassPath'] = path
         for info in infos:
             if info.Name == 'URL':
                 url = info.Value
