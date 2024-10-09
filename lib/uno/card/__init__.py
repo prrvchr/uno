@@ -38,7 +38,7 @@ from .cardtool import getLogException
 from .dbtool import getDriverPropertyInfos
 
 # FIXME Import necessary exclusively for vCardOOo
-from .unotool import getUrl
+#from .unotool import getUrl
 
 from .configuration import g_defaultlog
 from .configuration import g_host
