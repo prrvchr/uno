@@ -90,12 +90,6 @@ class Provider(object):
     @property
     def UploadUrl(self):
         raise NotImplementedError
-    @property
-    def Chunk(self):
-        raise NotImplementedError
-    @property
-    def Buffer(self):
-        raise NotImplementedError
 
     # Can be rewrited properties
     @property
@@ -104,12 +98,6 @@ class Provider(object):
     @property
     def GenerateIds(self):
         return all(self.IdentifierRange)
-    @property
-    def FileSyncModes(self):
-        return (SYNC_FILE, )
-    @property
-    def FolderSyncModes(self):
-        return (SYNC_FOLDER, )
     @property
     def SupportSharedDocuments(self):
         return self._config.getByName('SupportShare') and self._config.getByName('SharedDocuments')
@@ -127,14 +115,13 @@ class Provider(object):
 
     def getDocumentContent(self, content, url):
         data = self.getDocumentLocation(content)
-        if data is None:
-            return False
-        return self.getFileContent(content.User, data, url)
+        if data is not None:
+            return self.getFileContent(content.User, data, url)
+        return False
 
     def getFileContent(self, user, data, url):
         parameter = self.getRequestParameter(user.Request, 'getFileContent', data)
-        chunk, retry, delay = self._getDownloadSetting()
-        return user.Request.download(parameter, url, chunk, retry, delay)
+        return user.Request.download(parameter, url, *self._getDownloadSetting())
 
     # Method called by Replicator
     def pullNewIdentifiers(self, user):
@@ -185,34 +172,6 @@ class Provider(object):
             token = self.parseUserToken(response)
         response.close()
         return token
-
-    def _getRejectedItems(self, items):
-        rejected = []
-        for item in items:
-            itemid = self._getItemId(item)
-            title = self._getItemTitle(item)
-            parents = self._getItemParents(item)
-            rejected.append((title, itemid, ','.join(parents)))
-        return rejected
-
-    def _isValidItem(self, item, roots, orphans):
-        itemid = self._getItemId(item)
-        parents = self._getItemParents(item)
-        if not all(parent in roots for parent in parents):
-            orphans[itemid] = item
-            return False
-        roots.append(itemid)
-        return True
-
-    def _validItem(self, item, roots, orphans):
-        return True
-
-    def _getItemId(self, item):
-        return item[0]
-    def _getItemTitle(self, item):
-        return item[1]
-    def _getItemParents(self, item):
-        return item[11]
 
     # Must be implemented method
     def getRequestParameter(self, request, method, data):
