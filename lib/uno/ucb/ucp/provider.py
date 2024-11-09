@@ -227,9 +227,6 @@ class Provider(object):
     def parseItems(self, request, parameter, rootid):
         raise NotImplementedError
 
-    def parseChanges(self, user, parameter):
-        raise NotImplementedError
-
     def parseUserToken(self, user):
         raise NotImplementedError
 
