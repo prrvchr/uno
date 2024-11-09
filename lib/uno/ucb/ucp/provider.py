@@ -129,9 +129,12 @@ class Provider(object):
         data = self.getDocumentLocation(content)
         if data is None:
             return False
-        parameter = self.getRequestParameter(content.User.Request, 'getDocumentContent', data)
+        return self.getFileContent(content.User, data, url)
+
+    def getFileContent(self, user, data, url):
+        parameter = self.getRequestParameter(user.Request, 'getFileContent', data)
         chunk, retry, delay = self._getDownloadSetting()
-        return content.User.Request.download(parameter, url, chunk, retry, delay)
+        return user.Request.download(parameter, url, chunk, retry, delay)
 
     # Method called by Replicator
     def pullNewIdentifiers(self, user):
@@ -169,12 +172,17 @@ class Provider(object):
         count = user.DataBase.pullItems(iterator, user.Id, timestamp)
         return parameter.PageCount, count, parameter.SyncToken
 
+    def pullFileContent(self, user, itemid, item):
+        url = self.getTargetUrl(itemid)
+        if self.getSimpleFile().exists(url):
+            self.getFileContent(user, item, url)
+
     def getUserToken(self, user):
+        token = ''
         parameter = self.getRequestParameter(user.Request, 'getToken', user)
         response = user.Request.execute(parameter)
-        if not response.Ok:
-            pass
-        token = self.parseUserToken(response)
+        if response.Ok:
+            token = self.parseUserToken(response)
         response.close()
         return token
 
@@ -246,8 +254,8 @@ class Provider(object):
     def updateItemId(self, database, item, response):
         raise NotImplementedError
 
-    def initUser(self, database, user, token):
-        pass
+    def initUser(self, user, token):
+        user.Token = token
 
     # Base method
     def parseDateTime(self, timestamp):

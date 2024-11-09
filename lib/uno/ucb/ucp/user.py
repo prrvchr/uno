@@ -135,6 +135,10 @@ class User():
     @property
     def Token(self):
         return self.MetaData.get('Token')
+    @Token.setter
+    def Token(self, token):
+        self.MetaData['Token'] = token
+        self.DataBase.updateToken(self.Id, token)
     @property
     def SyncMode(self):
         return self.MetaData.get('SyncMode')
@@ -157,9 +161,6 @@ class User():
     @TimeStamp.setter
     def TimeStamp(self, timestamp):
         self.MetaData['TimeStamp'] = timestamp
-
-    def setToken(self, token):
-        self.MetaData['Token'] = token
 
     # method called from Replicator
     def releaseLock(self):

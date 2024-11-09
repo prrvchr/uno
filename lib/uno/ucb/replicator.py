@@ -116,44 +116,31 @@ class Replicator(Thread):
         elif self._provider.isOffLine():
             self._logger.logprb(INFO, g_basename, '_synchronize()', 123)
         else:
-            users = self._users.values()
-            if policy == self._getSynchronizePolicy('SERVER_IS_MASTER'):
-                users = self._pullUsers(users)
-                if users:
-                    self._pushUsers(users)
-            elif policy == self._getSynchronizePolicy('CLIENT_IS_MASTER'):
-                users = self._pushUsers(users)
-                if users:
-                    self._pullUsers(users)
+            for user in self._users.values():
+                self._synchronizeUser(user, policy)
         self._logger.logprb(INFO, g_basename, '_synchronize()', 124)
 
-    def _pullUsers(self, users):
-        try:
-            for user in users:
-                if self._canceled:
-                    break
-                self._logger.logprb(INFO, g_basename, '_pullUsers()', 201, user.Name)
-                # In order to make the creation of files or directories possible quickly,
-                # it is necessary to run the verification of the identifiers first.
-                self._checkNewIdentifier(user)
-                if self._isNewUser(user):
-                    self._initUser(user)
-                else:
-                    self._pullUser(user)
-                self._logger.logprb(INFO, g_basename, '_pullUsers()', 202, user.Name)
-            else:
-                return users
-            return None
-        except Exception as e:
-            self._logger.logprb(SEVERE, g_basename, '_pullUsers()', 203, e, traceback.format_exc())
+    def _synchronizeUser(self, user, policy):
+        self._logger.logprb(INFO, g_basename, '_synchronizeUser()', 131, user.Name)
+        sync = False
+        if self._isNewUser(user):
+            sync = self._initUser(user)
+        elif policy == self._getSynchronizePolicy('SERVER_IS_MASTER'):
+            if self._pullUser(user):
+                sync = self._pushUser(user)
+        elif policy == self._getSynchronizePolicy('CLIENT_IS_MASTER'):
+            if self._pushUser(user):
+                sync = self._pullUser(user)
+        if sync:
+            self._logger.logprb(INFO, g_basename, '_synchronizeUser()', 132, user.Name)
 
     def _checkNewIdentifier(self, user):
         if not self._provider.GenerateIds:
             user.CanAddChild = True
-            return
+            return True
         if self._provider.isOffLine():
             user.CanAddChild = self.DataBase.countIdentifier(user.Id) > 0
-            return
+            return True
         count = self.DataBase.countIdentifier(user.Id)
         if count < min(self._provider.IdentifierRange):
             total, msg = self._provider.pullNewIdentifiers(user)
@@ -163,65 +150,75 @@ class Replicator(Thread):
                 self._logger.logprb(INFO, g_basename, '_checkNewIdentifier()', 212, user.Name, msg)
         # Need to postpone the creation authorization after this verification...
         user.CanAddChild = True
+        return True
 
     def _initUser(self, user):
-        # This procedure is launched only once for each new user
-        # This procedure corresponds to the initial pull for a new User (ie: without Token)
-        self._logger.logprb(INFO, g_basename, '_initUser()', 221, user.Name)
-        pages, count, token = self._provider.firstPull(user)
-        print("Replicator._initUser() Pages: %s - Count: %s - Token : %s" % (pages, count, token))
-        self._provider.initUser(self.DataBase, user, token)
-        user.releaseLock()
-        self._fullPull = True
-        self._logger.logprb(INFO, g_basename, '_initUser()', 222, user.Name)
+        try:
+            # This procedure is launched only once for each new user
+            # This procedure corresponds to the initial pull for a new User (ie: without Token)
+            self._logger.logprb(INFO, g_basename, '_initUser()', 221, user.Name)
+            if self._checkNewIdentifier(user):
+                pages, count, token = self._provider.firstPull(user)
+                print("Replicator._initUser() Pages: %s - Count: %s - Token : %s" % (pages, count, token))
+                self._provider.initUser(user, token)
+                user.releaseLock()
+                self._fullPull = True
+                self._logger.logprb(INFO, g_basename, '_initUser()', 222, user.Name)
+                return True
+            return False
+        except Exception as e:
+            self._logger.logprb(SEVERE, g_basename, '_initUser()', 223, e, traceback.format_exc())
+            return False
 
     def _pullUser(self, user):
-        # This procedure is launched each time the synchronization is started
-        # This procedure corresponds to the pull for a User (ie: a Token is required)
-        pages, count, token = self._provider.pullUser(user)
-        if token:
-            user.setToken(token)
-        self._logger.logprb(INFO, g_basename, '_pullUser()', 231, user.Name, count, pages, token)
+        try:
+            if self._canceled:
+                return False
+            self._logger.logprb(INFO, g_basename, '_pullUser()', 201, user.Name)
+            # In order to make the creation of files or directories possible quickly,
+            # it is necessary to run the verification of the identifiers first.
+            if self._checkNewIdentifier(user):
+                pages, count, token = self._provider.pullUser(user)
+                self._logger.logprb(INFO, g_basename, '_pullUser()', 202, user.Name, count, pages, token)
+                if token:
+                    user.Token = token
+                self._logger.logprb(INFO, g_basename, '_pullUser()', 203, user.Name)
+                return True
+            return False
+        except Exception as e:
+            self._logger.logprb(SEVERE, g_basename, '_pullUser()', 204, e, traceback.format_exc())
+            return False
 
-    def _pushUsers(self, users):
+    def _pushUser(self, user):
         # This procedure is launched each time the synchronization is started
         # This procedure corresponds to the push of changes for the entire database 
         # for all users, in chronological order, from 'start' to 'end'...
         try:
-            pusers = []
+            if self._canceled:
+                return False
+            self._logger.logprb(INFO, g_basename, '_pushUsers()', 301, user.Name)
+            items = []
+            start = user.TimeStamp
             end = currentDateTimeInTZ()
-            for user in users:
+            for item in self.DataBase.getPushItems(user.Id, start, end):
                 if self._canceled:
                     break
-                self._logger.logprb(INFO, g_basename, '_pushUsers()', 301, user.Name)
-                if self._isNewUser(user):
-                    self._initUser(user)
-                item = None
-                items = []
-                start = user.TimeStamp
-                for item in self.DataBase.getPushItems(user.Id, start, end):
-                    if self._canceled:
-                        break
-                    metadata = self.DataBase.getMetaData(user, item)
-                    newid = self._pushItem(user, item, metadata, start, end)
-                    if newid is None:
-                        modified = getDateTimeToString(metadata.get('DateModified'))
-                        self._logger.logprb(SEVERE, g_basename, '_pushUsers()', 302, metadata.get('Title'), modified, metadata.get('Id'))
-                        break
-                    else:
-                        items.append(newid)
-                else:
-                    # XXX: User was pushed, we update user timestamp if needed
-                    self.DataBase.updatePushItems(user, items)
-                    self._logger.logprb(INFO, g_basename, '_pushUsers()', 303, user.Name)
-                    continue
-                break
+                metadata = self.DataBase.getMetaData(user, item)
+                pushed = self._pushItem(user, item, metadata, start, end)
+                if pushed is None:
+                    modified = getDateTimeToString(metadata.get('DateModified'))
+                    self._logger.logprb(SEVERE, g_basename, '_pushUsers()', 302, metadata.get('Title'), modified, metadata.get('Id'))
+                    break
+                items.append(pushed)
             else:
-                return users
-            return None
+                # XXX: User was pushed, we update user timestamp if needed
+                self.DataBase.updatePushItems(user, items)
+                self._logger.logprb(INFO, g_basename, '_pushUsers()', 303, user.Name)
+                return True
+            return False
         except Exception as e:
             self._logger.logprb(SEVERE, g_basename, '_pushUsers()', 304, e, traceback.format_exc())
-
+            return False
 
     def _filterParents(self, call, provider, items, childs, roots, start):
         i = -1

@@ -369,9 +369,8 @@ class DataBase():
         update = self._getCall('updateToken')
         update.setString(1, token)
         update.setString(2, userid)
-        updated = update.executeUpdate() == 1
+        update.executeUpdate()
         update.close()
-        return updated
 
     # Identifier counting procedure
     def countIdentifier(self, userid):
@@ -400,6 +399,20 @@ class DataBase():
         return count
 
     # Pull procedure
+    def pullItem(self, userid, item, timestamp, mode=1):
+        call1 = self._getCall('mergeItem')
+        call2 = self._getCall('mergeParent')
+        call1.setString(1, userid)
+        call2.setString(1, userid)
+        call1.setInt(2, mode)
+        call1.setObject(3, timestamp)
+        if self._mergeItem(call1, call2, item, timestamp):
+            call1.executeBatch()
+            call2.executeBatch()
+        call1.close()
+        call2.close()
+        return 1
+
     def pullItems(self, iterator, userid, timestamp, mode=1):
         count = 0
         call1 = self._getCall('mergeItem')
@@ -468,14 +481,12 @@ class DataBase():
         return properties
 
     def updatePushItems(self, user, itemids):
-        # XXX: We push items only if needed (ie: not empty)
-        if itemids:
-            call = self._getCall('updatePushItems')
-            call.setString(1, user.Id)
-            call.setArray(2, Array('VARCHAR', itemids))
-            call.execute()
-            user.TimeStamp = call.getObject(3, None)
-            call.close()
+        call = self._getCall('updatePushItems')
+        call.setString(1, user.Id)
+        call.setArray(2, Array('VARCHAR', itemids))
+        call.execute()
+        user.TimeStamp = call.getObject(3, None)
+        call.close()
 
     def getItemParentIds(self, itemid, metadata, start, end):
         call = self._getCall('getItemParentIds')
@@ -499,33 +510,33 @@ class DataBase():
 
 # Procedures called internally
     def _mergeItem(self, call1, call2, item, timestamp):
-        itemid = item[0]
+        itemid = item.get('Id')
         call1.setString(4, itemid)
-        call1.setString(5, item[1])
-        call1.setTimestamp(6, item[2])
-        call1.setTimestamp(7, item[3])
-        call1.setString(8, item[4])
-        size = item[5]
+        call1.setString(5, item.get('Name'))
+        call1.setTimestamp(6, item.get('DateCreated'))
+        call1.setTimestamp(7, item.get('DateModified'))
+        call1.setString(8, item.get('MediaType'))
+        size = item.get('Size')
         if os.name == 'nt':
             mx = 2 ** 32 / 2 -1
             if size > mx:
                 size = min(size, mx)
-                self._logger.logprb(SEVERE, 'DataBase', '_mergeItem()', 402, size, item[5])
+                self._logger.logprb(SEVERE, 'DataBase', '_mergeItem()', 402, size, item.get('Size'))
         call1.setLong(9, size)
-        call1.setString(10, item[6])
-        call1.setBoolean(11, item[7])
-        call1.setBoolean(12, item[8])
-        call1.setBoolean(13, item[9])
-        call1.setBoolean(14, item[10])
-        call1.setBoolean(15, item[11])
+        call1.setString(10, item.get('Link'))
+        call1.setBoolean(11, item.get('Trashed'))
+        call1.setBoolean(12, item.get('CanAddChild'))
+        call1.setBoolean(13, item.get('CanRename'))
+        call1.setBoolean(14, item.get('IsReadOnly'))
+        call1.setBoolean(15, item.get('IsVersionable'))
         call1.addBatch()
         self._mergeParent(call2, item, itemid, timestamp)
         return 1
 
     def _mergeParent(self, call, item, itemid, timestamp):
         call.setString(2, itemid)
-        call.setArray(3, Array('VARCHAR', item[12]))
-        path = item[13]
+        call.setArray(3, Array('VARCHAR', item.get('Parents')))
+        path = item.get('Path')
         if path is None:
             call.setNull(4, VARCHAR)
         else:
