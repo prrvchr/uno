@@ -80,11 +80,11 @@ class Replicator(Thread):
             self._provider = provider
             self._config = getConfiguration(ctx, g_identifier, False)
             self._logger = getLogger(ctx, g_synclog, g_basename)
-            self.DataBase = DataBase(ctx, self._logger, url)
+            self._database = DataBase(ctx, self._logger, url)
             sync.clear()
             self.start()
         except Exception as e:
-            self._logger.logprb(INFO, g_basename, '__init__()', 102, e, traceback.format_exc())
+            self._logger.logprb(SEVERE, g_basename, '__init__()', 102, e, traceback.format_exc())
         else:
             self._logger.logprb(INFO, g_basename, '__init__()', 101)
 
@@ -95,7 +95,7 @@ class Replicator(Thread):
         self._canceled = True
         self._sync.set()
         self.join()
-        self.DataBase.dispose()
+        self._database.dispose()
 
     def run(self):
         try:
@@ -140,9 +140,9 @@ class Replicator(Thread):
             user.CanAddChild = True
             return True
         if self._provider.isOffLine():
-            user.CanAddChild = self.DataBase.countIdentifier(user.Id) > 0
+            user.CanAddChild = self._database.countIdentifier(user.Id) > 0
             return True
-        count = self.DataBase.countIdentifier(user.Id)
+        count = self._database.countIdentifier(user.Id)
         if count < min(self._provider.IdentifierRange):
             total, msg = self._provider.pullNewIdentifiers(user)
             if total:
@@ -160,15 +160,16 @@ class Replicator(Thread):
             self._logger.logprb(INFO, g_basename, '_initUser()', 221, user.Name)
             if self._checkNewIdentifier(user):
                 pages, count, token = self._provider.firstPull(user)
+                self._logger.logprb(INFO, g_basename, '_initUser()', 222, user.Name, count, pages, token)
                 print("Replicator._initUser() Pages: %s - Count: %s - Token : %s" % (pages, count, token))
                 self._provider.initUser(user, token)
                 user.releaseLock()
                 self._fullPull = True
-                self._logger.logprb(INFO, g_basename, '_initUser()', 222, user.Name)
+                self._logger.logprb(INFO, g_basename, '_initUser()', 223, user.Name)
                 return True
             return False
         except Exception as e:
-            self._logger.logprb(SEVERE, g_basename, '_initUser()', 223, e, traceback.format_exc())
+            self._logger.logprb(SEVERE, g_basename, '_initUser()', 224, e, traceback.format_exc())
             return False
 
     def _pullUser(self, user):
@@ -201,10 +202,10 @@ class Replicator(Thread):
             items = []
             start = user.TimeStamp
             end = currentDateTimeInTZ()
-            for item in self.DataBase.getPushItems(user.Id, start, end):
+            for item in self._database.getPushItems(user.Id, start, end):
                 if self._canceled:
                     break
-                metadata = self.DataBase.getMetaData(user, item)
+                metadata = self._database.getMetaData(user, item)
                 pushed = self._pushItem(user, item, metadata, start, end)
                 if pushed is None:
                     modified = getDateTimeToString(metadata.get('DateModified'))
@@ -213,7 +214,7 @@ class Replicator(Thread):
                 items.append(pushed)
             else:
                 # XXX: User was pushed, we update user timestamp if needed
-                self.DataBase.updatePushItems(user, items)
+                self._database.updatePushItems(user, items)
                 self._logger.logprb(INFO, g_basename, '_pushUsers()', 303, user.Name)
                 return True
             return False
@@ -230,7 +231,7 @@ class Replicator(Thread):
                 itemid, parents = item
                 if all(parent in roots for parent in parents):
                     roots.append(itemid)
-                    row = self.DataBase.setDriveCall(call, provider, items[itemid], itemid, parents, start)
+                    row = self._database.setDriveCall(call, provider, items[itemid], itemid, parents, start)
                     rows.append(row)
                     childs.remove(item)
             childs.reverse()
@@ -256,7 +257,7 @@ class Replicator(Thread):
                     self._logger.logprb(INFO, g_basename, '_pushItem()', *args)
             # UPDATE procedures, only a few properties are synchronized: Title and content(ie: Size or DateModified)
             elif action & UPDATE:
-                for property in self.DataBase.getPushProperties(user.Id, itemid, start, end):
+                for property in self._database.getPushProperties(user.Id, itemid, start, end):
                     properties = property.get('Properties')
                     timestamp = property.get('TimeStamp')
                     modified = getDateTimeToString(metadata.get('DateModified'))
@@ -271,7 +272,7 @@ class Replicator(Thread):
                         self._logger.logprb(INFO, g_basename, '_pushItem()', 313, metadata.get('Title'), modified)
             # MOVE procedures to follow parent changes of a resource
             elif action & MOVE:
-                self.DataBase.getItemParentIds(itemid, metadata, start, end)
+                self._database.getItemParentIds(itemid, metadata, start, end)
                 newid = self._provider.updateParents(user.Request, itemid, metadata)
             elif action & DELETE:
                 newid = self._provider.updateTrashed(user.Request, itemid, metadata)

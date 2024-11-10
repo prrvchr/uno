@@ -70,12 +70,15 @@ class Provider():
     def __init__(self, ctx, logger):
         self._ctx = ctx
         self._logger = logger
-        self.Scheme = g_scheme
         self._sf = getSimpleFile(ctx)
-        self.SourceURL = getResourceLocation(ctx, g_identifier, g_scheme)
+        self._url = getResourceLocation(ctx, g_identifier, g_scheme)
         self._folders = []
         self._config = getConfiguration(ctx, g_identifier, False)
         self._logger.logprb(INFO, 'Provider', '__init__()', 551)
+
+    @property
+    def Scheme(self):
+        return g_scheme
 
     # Must be implemented properties
     @property
@@ -224,7 +227,7 @@ class Provider():
         return self._sf
 
     def getTargetUrl(self, itemid):
-        return self.SourceURL + g_ucbseparator + itemid
+        return self._url + g_ucbseparator + itemid
 
     def getUserToken(self, user):
         token = ''
