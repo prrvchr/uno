@@ -148,10 +148,12 @@ class Provider():
         pass
 
     def pullUser(self, user):
+        count = 0
         timestamp = currentDateTimeInTZ()
         parameter = self.getRequestParameter(user.Request, 'getPull', user)
-        iterator = self.parseItems(user.Request, parameter, user.RootId)
-        count = user.DataBase.pullItems(iterator, user.Id, timestamp)
+        for item in self.parseItems(user.Request, parameter, user.RootId):
+            count += user.DataBase.pullItems(user.Id, item, timestamp)
+            self.pullFileContent(user, item)
         return parameter.PageCount, count, parameter.SyncToken
 
     # Method called by Content
@@ -259,8 +261,8 @@ class Provider():
             datetime.IsUTC = dt.tzinfo == tz.tzutc()
         return datetime
 
-    def pullFileContent(self, user, itemid, item):
-        url = self.getTargetUrl(itemid)
+    def pullFileContent(self, user, item):
+        url = self.getTargetUrl(item.get('Id'))
         if self.getSimpleFile().exists(url):
             self.downloadFile(user, item, url)
 
