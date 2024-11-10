@@ -35,6 +35,7 @@ class OptionsView():
         self._window = window
         if exist:
             self._disableShare()
+        self._getReset().Model.Enabled = exist
         self._getDatasource().Model.Enabled = exist
         self._getUpload().Model.Enabled = resumable
 
