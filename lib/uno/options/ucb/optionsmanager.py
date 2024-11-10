@@ -76,7 +76,7 @@ class OptionsManager():
         self._view.enableShare(enabled)
 
     def enableSync(self, enabled):
-        self._view.enableSync(enabled, OptionsManager._restart)
+        self._view.enableSync(enabled, OptionsManager._restart, self._model.hasDataBase())
 
     def viewData(self):
         url = self._model.getDatasourceUrl()

@@ -201,13 +201,14 @@ class Replicator(Thread):
                     break
                 items.append(pushed)
             else:
+                self._logger.logprb(INFO, g_basename, '_pushUsers()', 303, user.Name, len(items))
                 # XXX: User was pushed, we update user timestamp if needed
                 self._database.updatePushItems(user, items)
-                self._logger.logprb(INFO, g_basename, '_pushUsers()', 303, user.Name)
+                self._logger.logprb(INFO, g_basename, '_pushUsers()', 304, user.Name)
                 return True
             return False
         except Exception as e:
-            self._logger.logprb(SEVERE, g_basename, '_pushUsers()', 304, e, traceback.format_exc())
+            self._logger.logprb(SEVERE, g_basename, '_pushUsers()', 305, e, traceback.format_exc())
             return False
 
     def _pushItem(self, user, item, metadata, start, end):

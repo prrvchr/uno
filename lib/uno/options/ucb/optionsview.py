@@ -60,7 +60,7 @@ class OptionsView():
         # XXX: because it was lost (ie: after setting the new step everything is visible).
         self.setRestart(restart)
 
-    def setViewData(self, reset, support, share, name, index, timeout, download, upload, restart):
+    def setViewData(self, exist, reset, support, share, name, index, timeout, download, upload, restart):
         self._getReset().State = int(reset)
         if support:
             self._getShare().State = int(share)
@@ -72,7 +72,7 @@ class OptionsView():
             self._getShareName().Text = name
             self.enableShare(False)
         self._getOption(index).State = 1
-        self.enableSync(index != 3, restart)
+        self.enableSync(index != 3, restart, exist)
         self._getTimeout().Value = timeout
         self._setSetting(download, 0)
         self._setSetting(upload, 1)
@@ -81,7 +81,8 @@ class OptionsView():
     def enableShare(self, enabled):
         self._getShareName().Model.Enabled = enabled
 
-    def enableSync(self, enabled, restart):
+    def enableSync(self, enabled, restart, exist):
+        self._getReset().Model.Enabled = enabled and exist
         self._getTimeoutLabel().Model.Enabled = enabled
         self._getTimeout().Model.Enabled = enabled
         self._enableUpload(enabled, restart)
