@@ -179,8 +179,8 @@ class Replicator(Thread):
             # In order to make the creation of files or directories possible quickly,
             # it is necessary to run the verification of the identifiers first.
             if self._checkNewIdentifier(user):
-                pages, count, token = self._provider.pullUser(user)
-                self._logger.logprb(INFO, g_basename, '_pullUser()', 202, user.Name, count, pages, token)
+                pages, count, download, token = self._provider.pullUser(user)
+                self._logger.logprb(INFO, g_basename, '_pullUser()', 202, user.Name, count, download, pages, token)
                 if token:
                     user.Token = token
                 self._logger.logprb(INFO, g_basename, '_pullUser()', 203, user.Name)

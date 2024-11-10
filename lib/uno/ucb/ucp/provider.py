@@ -148,13 +148,13 @@ class Provider():
         pass
 
     def pullUser(self, user):
-        count = 0
+        count = dowload = 0
         timestamp = currentDateTimeInTZ()
         parameter = self.getRequestParameter(user.Request, 'getPull', user)
         for item in self.parseItems(user.Request, parameter, user.RootId):
             count += user.DataBase.pullItems(user.Id, item, timestamp)
-            self.pullFileContent(user, item)
-        return parameter.PageCount, count, parameter.SyncToken
+            dowload += self.pullFileContent(user, item)
+        return parameter.PageCount, count, dowload, parameter.SyncToken
 
     # Method called by Content
     def updateFolderContent(self, content):
@@ -265,6 +265,8 @@ class Provider():
         url = self.getTargetUrl(item.get('Id'))
         if self.getSimpleFile().exists(url):
             self.downloadFile(user, item, url)
+            return True
+        return False
 
     def updateNewItemId(self, oldid, newid):
         source = self.getTargetUrl(oldid)
