@@ -148,13 +148,13 @@ class Provider():
         pass
 
     def pullUser(self, user):
-        count = dowload = 0
+        count = download = 0
         timestamp = currentDateTimeInTZ()
         parameter = self.getRequestParameter(user.Request, 'getPull', user)
         for item in self.parseItems(user.Request, parameter, user.RootId):
             count += user.DataBase.pullItems(user.Id, item, timestamp)
-            dowload += self.pullFileContent(user, item)
-        return parameter.PageCount, count, dowload, parameter.SyncToken
+            download += self.pullFileContent(user, item)
+        return parameter.PageCount, count, download, parameter.SyncToken
 
     # Method called by Content
     def updateFolderContent(self, content):
