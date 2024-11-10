@@ -152,7 +152,7 @@ class Provider():
         timestamp = currentDateTimeInTZ()
         parameter = self.getRequestParameter(user.Request, 'getPull', user)
         for item in self.parseItems(user.Request, parameter, user.RootId):
-            count += user.DataBase.pullItems(user.Id, item, timestamp)
+            count += user.DataBase.pullItem(user.Id, item, timestamp)
             download += self.pullFileContent(user, item)
         return parameter.PageCount, count, download, parameter.SyncToken
 
