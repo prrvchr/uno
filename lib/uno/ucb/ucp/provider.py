@@ -92,7 +92,7 @@ class Provider():
         raise NotImplementedError
 
     # Must be implemented method
-    def getDocumentLocation(self, user):
+    def getDocumentLocation(self, user, item):
         raise NotImplementedError
 
     def getFirstPullRoots(self, user):
@@ -164,15 +164,12 @@ class Provider():
         count = content.User.DataBase.pullItems(iterator, content.User.Id, timestamp)
         return count
 
-    def getDocumentContent(self, content, url):
-        data = self.getDocumentLocation(content)
+    def downloadFile(self, user, item, url):
+        data = self.getDocumentLocation(user, item)
         if data is not None:
-            return self.downloadFile(content.User, data, url)
+            parameter = self.getRequestParameter(user.Request, 'downloadFile', data)
+            return user.Request.download(parameter, url, *self._getDownloadSetting())
         return False
-
-    def downloadFile(self, user, data, url):
-        parameter = self.getRequestParameter(user.Request, 'downloadFile', data)
-        return user.Request.download(parameter, url, *self._getDownloadSetting())
 
     # Method called by Replicator
     def createFolder(self, user, itemid, item):

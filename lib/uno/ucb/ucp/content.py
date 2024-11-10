@@ -506,7 +506,7 @@ class Content(unohelper.Base,
         url = self._user.Provider.getTargetUrl(self.Id)
         if self.ConnectionMode == OFFLINE and sf.exists(url):
             return url, sf.getSize(url)
-        if self._user.Provider.getDocumentContent(self, url):
+        if self._user.Provider.downloadFile(self._user, self.MetaData, url):
             loaded = self._user.updateConnectionMode(self.Id, OFFLINE)
             self.setConnectionMode(loaded)
         else:
