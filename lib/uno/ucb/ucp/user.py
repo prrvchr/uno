@@ -4,7 +4,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
+║   Copyright (c) 2020-24 https://prrvchr.github.io                                  ║
 ║                                                                                    ║
 ║   Permission is hereby granted, free of charge, to any person obtaining            ║
 ║   a copy of this software and associated documentation files (the "Software"),     ║
@@ -140,13 +140,6 @@ class User():
         self._metadata['Token'] = token
         self.DataBase.updateToken(self.Id, token)
     @property
-    def SyncMode(self):
-        return self._metadata.get('SyncMode')
-    @SyncMode.setter
-    def SyncMode(self, mode):
-        self._metadata['SyncMode'] = mode
-        self.DataBase.updateUserSyncMode(self.Id, mode)
-    @property
     def SessionMode(self):
         return self.Request.getSessionMode(self.Provider.Host)
     @property
@@ -168,7 +161,6 @@ class User():
 
     # method called from Replicator
     def releaseLock(self):
-        self.SyncMode = 1
         if self._lock is not None and not self._lock.is_set():
             self._lock.set()
 
@@ -188,7 +180,7 @@ class User():
         return self._getContent(authority, uri.getPath(), isroot)
 
     def setLock(self):
-        if self._lock is not None and not self.SyncMode:
+        if self._lock is not None:
             self._lock.wait()
 
     # method called from Content._identifier

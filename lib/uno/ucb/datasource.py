@@ -4,7 +4,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
+║   Copyright (c) 2020-24 https://prrvchr.github.io                                  ║
 ║                                                                                    ║
 ║   Permission is hereby granted, free of charge, to any person obtaining            ║
 ║   a copy of this software and associated documentation files (the "Software"),     ║
@@ -78,7 +78,7 @@ class DataSource():
             self.DataBase.shutdownDataBase(self.Replicator.fullPull())
             self._logger.logprb(INFO, 'DataSource', 'dispose()', 341, self._provider.Scheme)
         except Exception as e:
-            print("DataSoure.dispose() ERROR: %s - %s" % (e, traceback.format_exc()))
+            self._logger.logprb(SEVERE, 'DataSource', 'dispose()', 342, e, traceback.format_exc())
 
     # Get called from ContentProvider.queryContent()
     def queryContent(self, source, authority, url):
@@ -118,19 +118,20 @@ class DataSource():
         else:
             name = self._getUserName(source, url)
             default = True
-        # User never change... we can cache it...
+        # XXX: User never change... we can cache it...
         if name in self._users:
             user = self._users[name]
             if not user.Request.isAuthorized():
-                # The user's OAuth2 configuration has been deleted and
-                # the OAuth2 configuration wizard has been canceled.
+                # XXX: The user's OAuth2 configuration has been deleted and
+                # XXX: the OAuth2 configuration wizard has been canceled.
                 msg = self._getExceptionMessage('_getUser()', 324, name)
                 raise IllegalIdentifierException(msg, source)
         else:
             user = User(self._ctx, source, self._logger, self.DataBase,
                         self._provider, self._sync, name)
             self._users[name] = user
-        # FIXME: if the user has been instantiated then we can consider it as the default user
+        # XXX: If the user has been requested and instantiated
+        # XXX: then we can consider it as the default user
         if default:
             self._default = name
         return user, uri

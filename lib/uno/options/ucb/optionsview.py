@@ -4,7 +4,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
+║   Copyright (c) 2020-24 https://prrvchr.github.io                                  ║
 ║                                                                                    ║
 ║   Permission is hereby granted, free of charge, to any person obtaining            ║
 ║   a copy of this software and associated documentation files (the "Software"),     ║
@@ -40,13 +40,14 @@ class OptionsView():
 
 # OptionsView getter methods
     def getViewData(self):
+        reset = bool(self._getReset().State)
         share = bool(self._getShare().State)
         name = self._getShareName().Text
         index = self._getOptionIndex()
         timeout = int(self._getTimeout().Value)
         download = self._getSetting(0)
         upload = self._getSetting(1)
-        return share, name, index, timeout, download, upload
+        return reset, share, name, index, timeout, download, upload
 
     def getChunk(self, index):
         return int(self._getChunk(index).Value)
@@ -58,7 +59,8 @@ class OptionsView():
         # XXX: because it was lost (ie: after setting the new step everything is visible).
         self.setRestart(restart)
 
-    def setViewData(self, support, share, name, index, timeout, download, upload, restart):
+    def setViewData(self, reset, support, share, name, index, timeout, download, upload, restart):
+        self._getReset().State = int(reset)
         if support:
             self._getShare().State = int(share)
             self._getShareName().Text = name
@@ -124,8 +126,11 @@ class OptionsView():
         control.Model.Enabled = enabled
 
 # OptionsView private control methods
-    def _getShare(self):
+    def _getReset(self):
         return self._window.getControl('CheckBox1')
+
+    def _getShare(self):
+        return self._window.getControl('CheckBox2')
 
     def _getShareName(self):
         return self._window.getControl('TextField1')

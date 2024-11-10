@@ -4,7 +4,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
+║   Copyright (c) 2020-24 https://prrvchr.github.io                                  ║
 ║                                                                                    ║
 ║   Permission is hereby granted, free of charge, to any person obtaining            ║
 ║   a copy of this software and associated documentation files (the "Software"),     ║
@@ -56,6 +56,9 @@ class OptionsModel():
         self._factors = {'Timeout': 60, 'Chunk': 1024}
 
     @property
+    def _ResetSync(self):
+        return self._config.getByName('ResetSync')
+    @property
     def _IsShared(self):
         return self._config.getByName('SharedDocuments')
     @property
@@ -88,15 +91,16 @@ class OptionsModel():
         return hasdata, resumable
 
     def getViewData(self, restart):
-        return (self._SupportShare, self._IsShared, self._ShareName,
-                self._Policy, self._Timeout,
+        return (self._ResetSync, self._SupportShare, self._IsShared,
+                self._ShareName, self._Policy, self._Timeout,
                 self._Download, self._Upload, restart)
 
     def getDatasourceUrl(self):
         return self._url
 
 # OptionsModel setter methods
-    def setViewData(self, share, name, index, timeout, download, upload):
+    def setViewData(self, reset, share, name, index, timeout, download, upload):
+        self._setReset(reset)
         self._setShared(share)
         self._setShare(name)
         self._setPolicy(index)
@@ -124,6 +128,10 @@ class OptionsModel():
         return setting
 
 # OptionsModel private setter methods
+    def _setReset(self, enabled):
+        if enabled != self._ResetSync:
+            self._config.replaceByName('ResetSync', enabled)
+
     def _setShared(self, enabled):
         if enabled != self._IsShared:
             self._config.replaceByName('SharedDocuments', enabled)

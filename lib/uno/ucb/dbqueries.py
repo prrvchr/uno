@@ -4,7 +4,7 @@
 """
 ╔════════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                    ║
-║   Copyright (c) 2020 https://prrvchr.github.io                                     ║
+║   Copyright (c) 2020-24 https://prrvchr.github.io                                  ║
 ║                                                                                    ║
 ║   Permission is hereby granted, free of charge, to any person obtaining            ║
 ║   a copy of this software and associated documentation files (the "Software"),     ║
@@ -41,7 +41,7 @@ def getSqlQuery(ctx, name, format=None):
 
 # Select Queries
     if name == 'getUser':
-        query = 'SELECT "UserId", "UserName", "RootId", "Token", "SyncMode", "DateCreated", "DateModified", "TimeStamp" FROM "Users" WHERE "UserName" = ?;'
+        query = 'SELECT "UserId", "UserName", "RootId", "Token", "DateCreated", "DateModified", "TimeStamp" FROM "Users" WHERE "UserName" = ?;'
 
     elif name == 'getChildren':
         query = 'SELECT %(Columns)s FROM %(Children)s AS C WHERE C."UserId" = ? AND C."Path" = ? AND (C."IsFolder" = TRUE OR C."ConnectionMode" >= ?);' % format
@@ -65,9 +65,6 @@ def getSqlQuery(ctx, name, format=None):
 # Update Queries
     elif name == 'updateToken':
         query = 'UPDATE "Users" SET "Token"=? WHERE "UserId"=?;'
-
-    elif name == 'updateUserSyncMode':
-        query = 'UPDATE "Users" SET "SyncMode"=? WHERE "UserId"=?;'
 
     elif name == 'updateName':
         query = 'UPDATE "Items" SET "TimeStamp"=?, "Name"=?, "SyncMode"=2 WHERE "UserId"=? AND "ItemId"=?;'
@@ -269,7 +266,7 @@ CREATE PROCEDURE "InsertUser"(IN UserId VARCHAR(100),
   DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
-      SELECT "UserId", "UserName", "RootId", "Token", "SyncMode", "DateCreated", "DateModified", "TimeStamp"
+      SELECT "UserId", "UserName", "RootId", "Token", "DateCreated", "DateModified", "TimeStamp"
       FROM "Users"
       WHERE "UserName" = UserName FOR READ ONLY;
     INSERT INTO "Users" ("UserId", "UserName", "DisplayName", "RootId", "DateCreated", "DateModified", "TimeStamp") 
