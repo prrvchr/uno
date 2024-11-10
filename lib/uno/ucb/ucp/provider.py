@@ -261,8 +261,7 @@ class Provider():
     def pullFileContent(self, user, item):
         url = self.getTargetUrl(item.get('Id'))
         if self.getSimpleFile().exists(url):
-            self.downloadFile(user, item, url)
-            return True
+            return self.downloadFile(user, item, url)
         return False
 
     def updateNewItemId(self, oldid, newid):
