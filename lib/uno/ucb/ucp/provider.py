@@ -66,7 +66,7 @@ from collections import OrderedDict
 import traceback
 
 
-class Provider(object):
+class Provider():
     def __init__(self, ctx, logger):
         self._ctx = ctx
         self._logger = logger
@@ -79,16 +79,50 @@ class Provider(object):
 
     # Must be implemented properties
     @property
-    def Name(self):
+    def BaseUrl(self):
         raise NotImplementedError
     @property
     def Host(self):
         raise NotImplementedError
     @property
-    def BaseUrl(self):
+    def Name(self):
         raise NotImplementedError
     @property
     def UploadUrl(self):
+        raise NotImplementedError
+
+    # Must be implemented method
+    def getDocumentLocation(self, user):
+        raise NotImplementedError
+
+    def getFirstPullRoots(self, user):
+        raise NotImplementedError
+
+    def getRequestParameter(self, request, method, data):
+        raise NotImplementedError
+
+    def getUser(self, source, request, name):
+        raise NotImplementedError
+
+    def mergeNewFolder(self, user, itemid, response):
+        raise NotImplementedError
+
+    def parseFolder(self, parameter, content):
+        raise NotImplementedError
+
+    def parseItems(self, request, parameter, rootid):
+        raise NotImplementedError
+
+    def parseNewIdentifiers(self, response):
+        raise NotImplementedError
+
+    def parseUploadLocation(self, user):
+        raise NotImplementedError
+
+    def parseUserToken(self, user):
+        raise NotImplementedError
+
+    def updateItemId(self, user, item, response):
         raise NotImplementedError
 
     # Can be rewrited properties
@@ -105,36 +139,44 @@ class Provider(object):
     def SharedFolderName(self):
         return self._config.getByName('SharedFolderName')
 
+    # Can be rewrited method
+    def initUser(self, user, token):
+        user.Token = token
+
+    def initSharedDocuments(self, user, datetime):
+        # You must implement this method in Provider to be able to handle Shared Documents
+        pass
+
+    def pullUser(self, user):
+        timestamp = currentDateTimeInTZ()
+        parameter = self.getRequestParameter(user.Request, 'getPull', user)
+        iterator = self.parseItems(user.Request, parameter, user.RootId)
+        count = user.DataBase.pullItems(iterator, user.Id, timestamp)
+        return parameter.PageCount, count, parameter.SyncToken
+
     # Method called by Content
     def updateFolderContent(self, content):
         timestamp = currentDateTimeInTZ()
         parameter = self.getRequestParameter(content.User.Request, 'getFolderContent', content)
-        iterator = self.parseRootFolder(parameter, content)
+        iterator = self.parseFolder(parameter, content)
         count = content.User.DataBase.pullItems(iterator, content.User.Id, timestamp)
         return count
 
     def getDocumentContent(self, content, url):
         data = self.getDocumentLocation(content)
         if data is not None:
-            return self.getFileContent(content.User, data, url)
+            return self.downloadFile(content.User, data, url)
         return False
 
-    def getFileContent(self, user, data, url):
-        parameter = self.getRequestParameter(user.Request, 'getFileContent', data)
+    def downloadFile(self, user, data, url):
+        parameter = self.getRequestParameter(user.Request, 'downloadFile', data)
         return user.Request.download(parameter, url, *self._getDownloadSetting())
 
     # Method called by Replicator
-    def pullNewIdentifiers(self, user):
-        count, msg = 0, ''
-        parameter = self.getRequestParameter(user.Request, 'getNewIdentifier', user)
+    def createFolder(self, user, itemid, item):
+        parameter = self.getRequestParameter(user.Request, 'createNewFolder', item)
         response = user.Request.execute(parameter)
-        if not response.Ok:
-            msg = response.Text
-        else:
-            iterator = self.parseNewIdentifiers(response)
-            count = user.DataBase.insertIdentifier(iterator, user.Id)
-        response.close()
-        return count, msg
+        return self.mergeNewFolder(user, itemid, response)
 
     def firstPull(self, user):
         datetime = currentDateTimeInTZ()
@@ -148,21 +190,42 @@ class Provider(object):
             page += parameter.PageCount
         return page, count, parameter.SyncToken
 
-    def initSharedDocuments(self, user, datetime):
-        # You must implement this method in Provider to be able to handle Shared Documents
-        pass
+    def pullNewIdentifiers(self, user):
+        count, msg = 0, ''
+        parameter = self.getRequestParameter(user.Request, 'getNewIdentifier', user)
+        response = user.Request.execute(parameter)
+        if not response.Ok:
+            msg = response.Text
+        else:
+            iterator = self.parseNewIdentifiers(response)
+            count = user.DataBase.insertIdentifier(iterator, user.Id)
+        response.close()
+        return count, msg
 
-    def pullUser(self, user):
-        timestamp = currentDateTimeInTZ()
-        parameter = self.getRequestParameter(user.Request, 'getPull', user)
-        iterator = self.parseItems(user.Request, parameter, user.RootId)
-        count = user.DataBase.pullItems(iterator, user.Id, timestamp)
-        return parameter.PageCount, count, parameter.SyncToken
+    def updateName(self, request, itemid, item):
+        parameter = self.getRequestParameter(request, 'updateName', item)
+        response = request.execute(parameter)
+        response.close()
+        return itemid
 
-    def pullFileContent(self, user, itemid, item):
-        url = self.getTargetUrl(itemid)
-        if self.getSimpleFile().exists(url):
-            self.getFileContent(user, item, url)
+    def updateParents(self, request, itemid, item):
+        parameter = self.getRequestParameter(request, 'updateParents', item)
+        response = request.execute(parameter)
+        response.close()
+        return itemid
+
+    def updateTrashed(self, request, itemid, item):
+        parameter = self.getRequestParameter(request, 'updateTrashed', item)
+        response = request.execute(parameter)
+        response.close()
+        return itemid
+
+    # Base method
+    def getSimpleFile(self):
+        return self._sf
+
+    def getTargetUrl(self, itemid):
+        return self.SourceURL + g_ucbseparator + itemid
 
     def getUserToken(self, user):
         token = ''
@@ -173,47 +236,12 @@ class Provider(object):
         response.close()
         return token
 
-    # Must be implemented method
-    def getRequestParameter(self, request, method, data):
-        raise NotImplementedError
+    def isOffLine(self):
+        return ONLINE != getConnectionMode(self._ctx, self.Host)
 
-    def getUser(self, source, request, name):
-        raise NotImplementedError
+    def isOnLine(self):
+        return OFFLINE != getConnectionMode(self._ctx, self.Host)
 
-    def parseNewIdentifiers(self, response):
-        raise NotImplementedError
-
-    def parseItems(self, request, parameter, rootid):
-        raise NotImplementedError
-
-    def parseUserToken(self, user):
-        raise NotImplementedError
-
-    def getFirstPullRoots(self, user):
-        raise NotImplementedError
-
-    def parseUploadLocation(self, user):
-        raise NotImplementedError
-
-    def getDocumentLocation(self, user):
-        raise NotImplementedError
-
-    def mergeNewFolder(self, user, itemid, response):
-        raise NotImplementedError
-
-    def createNewFile(self, user, data):
-        raise NotImplementedError
-
-    def parseRootFolder(self, parameter, content):
-        raise NotImplementedError
-
-    def updateItemId(self, database, item, response):
-        raise NotImplementedError
-
-    def initUser(self, user, token):
-        user.Token = token
-
-    # Base method
     def parseDateTime(self, timestamp):
         datetime = uno.createUnoStruct('com.sun.star.util.DateTime')
         try:
@@ -231,32 +259,16 @@ class Provider(object):
             datetime.IsUTC = dt.tzinfo == tz.tzutc()
         return datetime
 
-    def isOnLine(self):
-        return OFFLINE != getConnectionMode(self._ctx, self.Host)
-
-    def isOffLine(self):
-        return ONLINE != getConnectionMode(self._ctx, self.Host)
-
-    def getItem(self, request, identifier):
-        parameter = self.getRequestParameter(request, 'getItem', identifier)
-        return request.execute(parameter)
+    def pullFileContent(self, user, itemid, item):
+        url = self.getTargetUrl(itemid)
+        if self.getSimpleFile().exists(url):
+            self.downloadFile(user, item, url)
 
     def updateNewItemId(self, oldid, newid):
         source = self.getTargetUrl(oldid)
         target = self.getTargetUrl(newid)
         if self._sf.exists(source) and not self._sf.exists(target):
             self._sf.move(source, target)
-
-    def getSimpleFile(self):
-        return self._sf
-
-    def getTargetUrl(self, itemid):
-        return self.SourceURL + g_ucbseparator + itemid
-
-    def createFolder(self, user, itemid, item):
-        parameter = self.getRequestParameter(user.Request, 'createNewFolder', item)
-        response = user.Request.execute(parameter)
-        return self.mergeNewFolder(user, itemid, response)
 
     def uploadFile(self, code, user, item, data, created, chunk, retry, delay, new=False):
         newid = None
@@ -278,7 +290,7 @@ class Provider(object):
                     args = code + 2, parameter.Name, data.get('Name'), response.Text
                     response.close()
                 elif new:
-                    newid = self.updateItemId(user.DataBase, item, response)
+                    newid = self.updateItemId(user, item, response)
                     args = code + 3, data.get('Name'), created, data.get('Size')
                 else:
                     response.close()
@@ -286,24 +298,8 @@ class Provider(object):
                     args = code + 4, data.get('Name'), created, data.get('Size')
         return newid, args
 
-    def updateName(self, request, itemid, item):
-        parameter = self.getRequestParameter(request, 'updateName', item)
-        response = request.execute(parameter)
-        response.close()
-        return itemid
-
-    def updateTrashed(self, request, itemid, item):
-        parameter = self.getRequestParameter(request, 'updateTrashed', item)
-        response = request.execute(parameter)
-        response.close()
-        return itemid
-
-    def updateParents(self, request, itemid, item):
-        parameter = self.getRequestParameter(request, 'updateParents', item)
-        response = request.execute(parameter)
-        response.close()
-        return itemid
-
+    # Private method
     def _getDownloadSetting(self):
         config = self._config.getByHierarchicalName('Settings/Download')
         return config.getByName('Chunk'), config.getByName('Retry'), config.getByName('Delay')
+

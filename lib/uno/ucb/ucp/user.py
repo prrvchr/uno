@@ -162,6 +162,10 @@ class User():
     def TimeStamp(self, timestamp):
         self.MetaData['TimeStamp'] = timestamp
 
+    # method called from DataSource
+    def dispose(self):
+        self.DataBase.dispose()
+
     # method called from Replicator
     def releaseLock(self):
         self.SyncMode = 1

@@ -91,21 +91,20 @@ class DataBase():
         return checkVersion(self._version, g_version)
 
 # Procedures called by the DataSource
-    def getDataSource(self):
-        return self.Connection.getParent().DatabaseDocument.DataSource
-
-    def storeDataBase(self, url):
-        self.Connection.getParent().DatabaseDocument.storeAsURL(url, ())
-
     def addCloseListener(self, listener):
-        self.Connection.Parent.DatabaseDocument.addCloseListener(listener)
+        self.Connection.getParent().DatabaseDocument.addCloseListener(listener)
 
     def shutdownDataBase(self, compact=False):
         if compact:
             query = getSqlQuery(self._ctx, 'shutdownCompact')
-        else:
-            query = getSqlQuery(self._ctx, 'shutdown')
-        self._statement.execute(query)
+            self._statement.execute(query)
+        #else:
+        #    query = getSqlQuery(self._ctx, 'shutdown')
+        #self._statement.execute(query)
+        self.dispose()
+
+    def dispose(self):
+        self._statement.close()
 
     def createUser(self, name, password):
         return createUser(self.Connection, name, password, g_role)
@@ -137,13 +136,6 @@ class DataBase():
         result.close()
         select.close()
         return user
-
-    def getDefaultUserTimeStamp(self):
-        dtz = DateTimeWithTimezone()
-        dtz.DateTimeInTZ.Year = 1970
-        dtz.DateTimeInTZ.Month = 1
-        dtz.DateTimeInTZ.Day = 1
-        return dtz
 
     def insertUser(self, user, root):
         data = None
@@ -241,7 +233,8 @@ class DataBase():
     def updateConnectionMode(self, userid, itemid, value):
         update = self._getCall('updateConnectionMode')
         update.setShort(1, value)
-        update.setString(2, itemid)
+        update.setString(2, userid)
+        update.setString(3, itemid)
         update.executeUpdate()
         update.close()
         return value
@@ -272,7 +265,8 @@ class DataBase():
             update = self._getCall('updateName')
             update.setObject(1, timestamp)
             update.setString(2, value)
-            update.setString(3, itemid)
+            update.setString(3, userid)
+            update.setString(4, itemid)
             updated = update.execute() == 0
             update.close()
             clear = True
@@ -282,26 +276,19 @@ class DataBase():
             update.setObject(1, timestamp)
             update.setLong(2, value)
             update.setTimestamp(3, currentUnoDateTime())
-            update.setString(4, itemid)
+            update.setString(4, userid)
+            update.setString(5, itemid)
             updated = update.execute() == 0
             update.close()
         elif property == 'Trashed':
             update = self._getCall('updateTrashed')
             update.setObject(1, timestamp)
             update.setBoolean(2, value)
-            update.setString(3, itemid)
+            update.setString(3, userid)
+            update.setString(4, itemid)
             updated = update.execute() == 0
             update.close()
         return updated, clear
-
-    def getNewTitle(self, title, parentid):
-        call = self._getCall('getNewTitle')
-        call.setString(1, title)
-        call.setString(2, parentid)
-        call.execute()
-        newtitle = call.getString(3)
-        call.close()
-        return newtitle
 
     def insertNewContent(self, userid, item, timestamp):
         try:
@@ -430,23 +417,6 @@ class DataBase():
         call2.close()
         return count
 
-    def pullChanges(self, iterator, userid, timestamp):
-        call = self._getCall('pullChanges')
-        count = 0
-        for item in iterator:
-            call.setString(1, userid)
-            call.setString(2, item[0])
-            call.setBoolean(3, item[1])
-            call.setNull(4, VARCHAR) if item[2] is None else call.setString(4, item[2])
-            call.setTimestamp(5, item[3])
-            call.setObject(6, timestamp)
-            call.addBatch()
-            count += 1
-        if count:
-            call.executeBatch()
-        call.close()
-        return count
-
     def updateUserSyncMode(self, userid, mode):
         update = self._getCall('updateUserSyncMode')
         update.setInt(1, mode)
@@ -500,11 +470,12 @@ class DataBase():
         metadata.insertValue('ParentToAdd', set(new) - set(old))
         metadata.insertValue('ParentToRemove', set(old) - set(new))
 
-    def updateItemId(self, newid, oldid):
+    def updateItemId(self, userid, newid, oldid):
         print("DataBase.updateItemId () NewId: %s - OldId: %s" % (newid, oldid))
         update = self._getCall('updateItemId')
         update.setString(1, newid)
-        update.setString(2, oldid)
+        update.setString(2, userid)
+        update.setString(3, oldid)
         update.executeUpdate()
         update.close()
 

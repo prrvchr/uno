@@ -95,6 +95,7 @@ class Replicator(Thread):
         self._canceled = True
         self._sync.set()
         self.join()
+        self.DataBase.dispose()
 
     def run(self):
         try:

@@ -164,8 +164,8 @@ def _getViews(catalog=g_catalog, schema=g_schema):
         yield catalog, schema, name
 
 def _getProcedures():
-    for name in ('GetItem', 'GetNewTitle', 'UpdatePushItems', 'GetPushItems', 'GetPushProperties',
-                 'GetItemParentIds', 'InsertUser', 'InsertSharedFolder', 'MergeItem', 'MergeParent',
-                 'InsertItem', 'PullChanges', 'UpdateNewItemId'):
+    for name in ('GetItem', 'UpdatePushItems', 'GetPushItems', 'GetPushProperties',
+                 'GetItemParentIds', 'InsertUser', 'InsertSharedFolder', 'MergeItem',
+                 'MergeParent', 'InsertItem', 'UpdateNewItemId'):
         yield name
 
