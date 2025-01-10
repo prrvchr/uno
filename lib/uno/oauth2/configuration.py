@@ -31,7 +31,9 @@
 g_extension = 'OAuth2OOo'
 g_identifier = 'io.github.prrvchr.%s' % g_extension
 g_service = '%s.OAuth2Service' % g_identifier
-g_version = '1.3.8'
+g_version = '1.4.0'
+g_chunk = g_chunk = 320 * 1024
 
 g_oauth2 = g_service
+g_token = 'Bearer ${AccessToken}'
 

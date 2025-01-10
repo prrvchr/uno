@@ -27,28 +27,29 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from ..unotool import createService
-from ..unotool import getExtensionVersion
+import unohelper
 
-from .configuration import g_identifier
-from .configuration import g_service
+from com.sun.star.util import XCloseListener
+from com.sun.star.util import CloseVetoException
+
+import traceback
 
 
-def getOAuth2(ctx, url='', name=''):
-    if url and name:
-        oauth2 = createService(ctx, g_service, url, name)
-    else:
-        oauth2 = createService(ctx, g_service)
-    return oauth2
+class CloseListener(unohelper.Base,
+                    XCloseListener):
+    def __init__(self, datasource):
+        self._datasource = datasource
 
-def getOAuth2Version(ctx):
-    version = getExtensionVersion(ctx, g_identifier)
-    return version
+    # XCloseListener
+    def queryClosing(self, source, ownership):
+        # XXX: If it's the ownership we need to throw CloseVetoException
+        if ownership:
+            raise CloseVetoException()
+        self._datasource.dispose()
 
-def getRequest(ctx, url=None, name=None):
-    if url and name:
-        request = createService(ctx, g_service, url, name)
-    else:
-        request = createService(ctx, g_service)
-    return request
+    def notifyClosing(self, source):
+        pass
+
+    def disposing(self, source):
+        pass
 
