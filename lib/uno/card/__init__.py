@@ -38,8 +38,6 @@ from .cardtool import getLogException
 from .dbtool import getDriverPropertyInfos
 
 from .configuration import g_defaultlog
-from .configuration import g_host
 from .configuration import g_identifier
 from .configuration import g_protocol
-from .configuration import g_scheme
 

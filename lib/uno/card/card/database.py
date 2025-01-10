@@ -57,6 +57,7 @@ from ..unotool import getSimpleFile
 from ..configuration import g_identifier
 from ..configuration import g_admin
 from ..configuration import g_host
+from ..configuration import g_scheme
 
 from ..dbqueries import getSqlQuery
 
@@ -155,13 +156,13 @@ class DataBase(object):
         call.close()
         return session
 
-    def insertUser(self, uri, scheme, server, path, name):
+    def insertUser(self, uri, path, name):
         metadata = None
         books = []
         call = self._getCall('insertUser')
         call.setString(1, uri)
-        call.setString(2, scheme)
-        call.setString(3, server)
+        call.setString(2, g_scheme)
+        call.setString(3, g_host)
         call.setString(4, path)
         call.setString(5, name)
         result = call.executeQuery()
@@ -169,8 +170,8 @@ class DataBase(object):
         if not call.wasNull():
             metadata = {'User': user,
                         'Uri': uri,
-                        'Scheme': scheme,
-                        'Server': server,
+                        'Scheme': g_scheme,
+                        'Server': g_host,
                         'Path': path,
                         'Name': name}
             while result.next():
@@ -204,11 +205,11 @@ class DataBase(object):
     def _getItemOptions(self, catalog, schema, name, *options):
         yield catalog, schema, name, *options
 
-    def selectUser(self, server, name):
+    def selectUser(self, name):
         metadata = None
         books = []
         call = self._getCall('selectUser')
-        call.setString(1, server)
+        call.setString(1, g_host)
         call.setString(2, name)
         result = call.executeQuery()
         user = call.getInt(3)
@@ -216,7 +217,7 @@ class DataBase(object):
             metadata = {'User': user,
                         'Uri': call.getString(4),
                         'Scheme': call.getString(5),
-                        'Server': server,
+                        'Server': g_host,
                         'Path': call.getString(6),
                         'Name': name}
             while result.next():
