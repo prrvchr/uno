@@ -33,6 +33,7 @@ from .datasource import DataSource
 
 from .dbtool import getDriverPropertyInfos
 
+from .cardtool import getDataSourceUrl
 from .cardtool import getLogException
 
 from .logger import getLogger

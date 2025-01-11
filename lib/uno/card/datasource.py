@@ -36,36 +36,19 @@ from .card import Replicator
 from .card import EventListener
 from .card import TerminateListener
 
-from .cardtool import getLogException
+from .unotool import getDesktop
+
 from .cardtool import getSqlException
 
-from .unotool import checkVersion
-from .unotool import getDesktop
-from .unotool import getExtensionVersion
-
-from .dbtool import getConnectionUrl
-
-from .oauth20 import getOAuth2Version
-from .oauth20 import g_extension as g_oauth2ext
-from .oauth20 import g_version as g_oauth2ver
-
-from .jdbcdriver import g_extension as g_jdbcext
-from .jdbcdriver import g_identifier as g_jdbcid
-from .jdbcdriver import g_version as g_jdbcver
-
-from .configuration import g_extension
-from .configuration import g_host
-
-from .dbconfig import g_folder
 
 from threading import Event
 
 class DataSource():
-    def __init__(self, ctx, logger, source, state, code, cls, mtd):
+    def __init__(self, ctx, logger, url):
         self._ctx = ctx
         self._maps = {}
-        database = DataBase(ctx, self._getConnectionUrl(ctx, logger, source, state, code, cls, mtd))
-        provider = Provider(ctx, database.getMetaData('item'))
+        database = DataBase(ctx, logger, url)
+        provider = Provider(ctx, *database.getMetaData('item'))
         users = {}
         sync = Event()
         self._sync = sync
@@ -123,17 +106,4 @@ class DataSource():
             if user.hasSession():
                 return True
         return False
-
-    def _getConnectionUrl(self, ctx, logger, source, state, code, cls, mtd):
-        oauth2 = getOAuth2Version(ctx)
-        driver = getExtensionVersion(ctx, g_jdbcid)
-        if oauth2 is None:
-            raise getLogException(logger, source, state, code, cls, mtd, g_oauth2ext, g_extension)
-        if not checkVersion(oauth2, g_oauth2ver):
-            raise getLogException(logger, source, state, code + 1, cls, mtd, oauth2, g_oauth2ext, g_oauth2ver)
-        if driver is None:
-            raise getLogException(logger, source, state, code, cls, mtd, g_jdbcext, g_extension)
-        if not checkVersion(driver, g_jdbcver):
-            raise getLogException(logger, source, state, code + 1, cls, mtd, driver, g_jdbcext, g_jdbcver)
-        return getConnectionUrl(ctx, g_folder + '/' + g_host)
 

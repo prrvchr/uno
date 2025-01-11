@@ -73,7 +73,7 @@ import traceback
 
 
 class DataBase(DataBaseMain):
-    def __init__(self, ctx, url, user='', pwd=''):
+    def __init__(self, ctx, logger, url, user='', pwd=''):
         self._ctx = ctx
         self._statement = None
         self._fieldsMap = {}
@@ -84,7 +84,7 @@ class DataBase(DataBaseMain):
         connection = getDataBaseConnection(ctx, url, user, pwd, new)
         self._version = connection.getMetaData().getDriverVersion()
         if new and self.isUptoDate():
-            createDataBase(ctx, connection, odb)
+            createDataBase(ctx, logger, connection, odb)
         connection.close()
 
     @property
