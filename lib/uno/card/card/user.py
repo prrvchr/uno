@@ -27,25 +27,20 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import uno
-import unohelper
-
 from com.sun.star.ucb.ConnectionMode import OFFLINE
 from com.sun.star.ucb.ConnectionMode import ONLINE
 
-from .book import Books
+from .books import Books
+
+from ..dbconfig import g_dotcode
 
 from ..cardtool import getSqlException
 
 from ..unotool import getConnectionMode
 
-from ..dbconfig import g_dotcode
-
 from ..configuration import g_extension
 from ..configuration import g_host
 from ..configuration import g_scope
-
-import traceback
 
 
 class User(object):

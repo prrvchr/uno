@@ -35,9 +35,6 @@ from .logger import getLogger
 
 from .configuration import g_basename
 from .configuration import g_defaultlog
-from .configuration import g_extension
-
-import traceback
 
 
 def getLogException(logger, source, state, code, cls, mtd, *args):
