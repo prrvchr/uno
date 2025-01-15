@@ -43,6 +43,7 @@ from dateutil import tz
 
 class Provider(ProviderMain):
     def __init__(self, ctx, paths, lists, maps, types, tmps, fields):
+        ProviderMain.__init__(self)
         self._cls = 'Provider'
         self._ctx = ctx
         self._paths = paths
