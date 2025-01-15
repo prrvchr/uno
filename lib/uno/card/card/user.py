@@ -39,30 +39,29 @@ from ..cardtool import getSqlException
 from ..unotool import getConnectionMode
 
 from ..configuration import g_extension
-from ..configuration import g_host
-from ..configuration import g_scope
 
 
 class User(object):
-    def __init__(self, ctx, source, database, provider, name, pwd=''):
+    def __init__(self, ctx, source, database, provider, url, scheme, server, name, pwd=''):
+        self._cls = 'User'
+        mtd = '__init__'
         self._ctx = ctx
         self._password = pwd
         self._sessions = []
-        self._metadata, books = database.selectUser(name)
+        self._metadata, books = database.selectUser(server, name)
         new = self._metadata is None
-        cls, mtd = 'User', '__init__()'
         if not new:
-            request = provider.getRequest(g_scope, name)
+            request = provider.getRequest(url, name)
             if request is None:
-                raise getSqlException(ctx, source, 1002, 1501, cls, mtd, name, g_extension)
+                raise getSqlException(ctx, source, 1002, 1501, self._cls, mtd, name, g_extension)
         else:
-            if self._isOffLine(g_host):
-                raise getSqlException(ctx, source, 1004, 1502, cls, mtd, g_host)
-            request = provider.getRequest(g_scope, name)
+            if self._isOffLine(server):
+                raise getSqlException(ctx, source, 1004, 1502, self._cls, mtd, server)
+            request = provider.getRequest(url, name)
             if request is None:
-                raise getSqlException(ctx, source, 1002, 1501, cls, mtd, name, g_extension)
-            self._metadata, books = self._getUserData(ctx, source, cls, database,
-                                                      provider, request, name, pwd)
+                raise getSqlException(ctx, source, 1002, 1501, self._cls, mtd, name, g_extension)
+            self._metadata, books = self._getUserData(source, database, provider,
+                                                      request, scheme, server, name, pwd)
             database.createUser(self.getSchema(), self.Id, name, '')
         self.Request = request
         self._books = Books(ctx, books, new)
@@ -129,10 +128,10 @@ class User(object):
     def getBooks(self):
         return self._books.getBooks()
 
-    def _getUserData(self, ctx, source, cls, database, provider, request, name, pwd):
-        metadata, books = provider.insertUser(source, database, request, name, pwd)
+    def _getUserData(self, source, database, provider, request, scheme, server, name, pwd):
+        metadata, books = provider.insertUser(source, database, request, scheme, server, name, pwd)
         if metadata is None:
-            raise getSqlException(ctx, source, 1005, 1503, cls, '_getUserData', name)
+            raise getSqlException(self._ctx, source, 1005, 1503, self._cls, '_getUserData', name)
         return metadata, books
 
     def _isOffLine(self, server):

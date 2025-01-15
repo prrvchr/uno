@@ -77,8 +77,8 @@ class DataSource():
             user.removeSession(self._database.getSessionId(connection))
 
 # Procedures called by Driver
-    def getConnection(self, source, account, password=''):
-        uri = self._provider.getUserUri(account)
+    def getConnection(self, source, url, scheme, server, account, password=''):
+        uri = self._provider.getUserUri(server, account)
         if uri in self._maps:
             name = self._maps.get(uri)
             user = self._users.get(name)
@@ -87,7 +87,7 @@ class DataSource():
                 raise getSqlException(self._ctx, source, 1002, 1401, cls, mtd, name)
         else:
             user = User(self._ctx, source, self._database,
-                        self._provider, account, password)
+                        self._provider, url, scheme, server, account, password)
             name = user.getName()
             self._users[name] = user
             self._maps[uri] = name
