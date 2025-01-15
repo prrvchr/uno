@@ -56,7 +56,6 @@ from ..unotool import getSimpleFile
 
 from ..configuration import g_identifier
 from ..configuration import g_host
-from ..configuration import g_scheme
 
 from ..dbqueries import getSqlQuery
 
@@ -154,13 +153,13 @@ class DataBase(DataBaseMain):
         call.close()
         return session
 
-    def insertUser(self, uri, path, name):
+    def insertUser(self, uri, scheme, server, path, name):
         metadata = None
         books = []
         call = self._getCall('insertUser')
         call.setString(1, uri)
-        call.setString(2, g_scheme)
-        call.setString(3, g_host)
+        call.setString(2, scheme)
+        call.setString(3, server)
         call.setString(4, path)
         call.setString(5, name)
         result = call.executeQuery()
@@ -168,8 +167,8 @@ class DataBase(DataBaseMain):
         if not call.wasNull():
             metadata = {'User': user,
                         'Uri': uri,
-                        'Scheme': g_scheme,
-                        'Server': g_host,
+                        'Scheme': scheme,
+                        'Server': server,
                         'Path': path,
                         'Name': name}
             while result.next():
@@ -203,11 +202,11 @@ class DataBase(DataBaseMain):
     def _getItemOptions(self, catalog, schema, name, *options):
         yield catalog, schema, name, *options
 
-    def selectUser(self, name):
+    def selectUser(self, server, name):
         metadata = None
         books = []
         call = self._getCall('selectUser')
-        call.setString(1, g_host)
+        call.setString(1, server)
         call.setString(2, name)
         result = call.executeQuery()
         user = call.getInt(3)
@@ -215,7 +214,7 @@ class DataBase(DataBaseMain):
             metadata = {'User': user,
                         'Uri': call.getString(4),
                         'Scheme': call.getString(5),
-                        'Server': g_host,
+                        'Server': server,
                         'Path': call.getString(6),
                         'Name': name}
             while result.next():
