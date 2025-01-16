@@ -48,7 +48,7 @@ class DataSource():
         self._ctx = ctx
         self._maps = {}
         database = DataBase(ctx, logger, url)
-        provider = Provider(ctx, *database.getMetaData('item'))
+        provider = Provider(ctx, database)
         users = {}
         sync = Event()
         self._sync = sync

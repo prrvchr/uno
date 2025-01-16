@@ -42,16 +42,10 @@ from dateutil import tz
 
 
 class Provider(ProviderMain):
-    def __init__(self, ctx, paths, lists, maps, types, tmps, fields):
-        ProviderMain.__init__(self)
+    def __init__(self, ctx, database):
+        ProviderMain.__init__(self, database)
         self._cls = 'Provider'
         self._ctx = ctx
-        self._paths = paths
-        self._lists = lists
-        self._maps = maps
-        self._types = types
-        self._tmps = tmps
-        self._fields = fields
 
     # Currently only vCardOOo supports multiple address books
     def supportAddressBook(self):
