@@ -239,11 +239,11 @@ class DataBase():
             self._initUserView('Book', *args)
         self._updateBookSync(user, stop)
 
-    def initGroups(self, book, iterator):
+    def initGroups(self, user, uri, iterator):
         uris = []
         names = []
         call = self._getCall('initGroups')
-        call.setInt(1, book.Id)
+        call.setInt(1, user.Books.getBook(uri).Id)
         for uri, name in iterator:
             uris.append(uri)
             names.append(name)
