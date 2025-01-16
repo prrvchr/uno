@@ -27,48 +27,59 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
+from com.sun.star.logging.LogLevel import INFO
+from com.sun.star.logging.LogLevel import SEVERE
+
 from com.sun.star.ucb.ConnectionMode import OFFLINE
 from com.sun.star.ucb.ConnectionMode import ONLINE
 
 from .books import Books
 
-from ..dbconfig import g_dotcode
-
 from ..cardtool import getSqlException
+from ..cardtool import getUserId
+from ..cardtool import getUserSchema
 
 from ..unotool import getConnectionMode
 
 from ..configuration import g_extension
 
+import traceback
 
 class User(object):
-    def __init__(self, ctx, source, database, provider, url, scheme, server, name, pwd=''):
+    def __init__(self, ctx, source, logger, database, provider, url, scheme, server, name, pwd=''):
         self._cls = 'User'
         mtd = '__init__'
+        logger.logprb(INFO, self._cls, mtd, 1351, name)
         self._ctx = ctx
         self._password = pwd
         self._sessions = []
-        self._metadata, books = database.selectUser(server, name)
-        new = self._metadata is None
+        logger.logprb(INFO, self._cls, mtd, 1352, name)
+        metadata, books = database.selectUser(server, name)
+        new = metadata is None
         if not new:
+            logger.logprb(INFO, self._cls, mtd, 1353, name)
             request = provider.getRequest(url, name)
             if request is None:
                 raise getSqlException(ctx, source, 1002, 1501, self._cls, mtd, name, g_extension)
         else:
+            logger.logprb(INFO, self._cls, mtd, 1354, name)
             if self._isOffLine(server):
                 raise getSqlException(ctx, source, 1004, 1502, self._cls, mtd, server)
             request = provider.getRequest(url, name)
             if request is None:
                 raise getSqlException(ctx, source, 1002, 1501, self._cls, mtd, name, g_extension)
-            self._metadata, books = self._getUserData(source, database, provider,
-                                                      request, scheme, server, name, pwd)
-            database.createUser(self.getSchema(), self.Id, name, '')
+            metadata, books = provider.insertUser(source, logger, database, request, scheme, server, name, pwd)
+            if metadata is None:
+                raise getSqlException(ctx, source, 1005, 1503, self._cls, mtd, name)
+            database.createUser(getUserSchema(metadata), getUserId(metadata), name, '')
         self.Request = request
+        self._metadata = metadata
         self._books = Books(ctx, books, new)
+        logger.logprb(INFO, self._cls, mtd, 1355, name)
 
     @property
     def Id(self):
-        return self._metadata.get('User')
+        return getUserId(self._metadata)
     @property
     def Uri(self):
         return self._metadata.get('Uri')
@@ -108,9 +119,7 @@ class User(object):
         return password
 
     def getSchema(self):
-        # FIXME: We need to replace the dot for schema name
-        # FIXME: g_dotcode is used in database procedure too...
-        return self.Name.replace('.', chr(g_dotcode))
+        return getUserSchema(self._metadata)
 
     def hasSession(self):
         return len(self._sessions) > 0
@@ -127,12 +136,6 @@ class User(object):
 
     def getBooks(self):
         return self._books.getBooks()
-
-    def _getUserData(self, source, database, provider, request, scheme, server, name, pwd):
-        metadata, books = provider.insertUser(source, database, request, scheme, server, name, pwd)
-        if metadata is None:
-            raise getSqlException(self._ctx, source, 1005, 1503, self._cls, '_getUserData', name)
-        return metadata, books
 
     def _isOffLine(self, server):
         return getConnectionMode(self._ctx, server) != ONLINE

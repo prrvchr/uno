@@ -27,7 +27,6 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from com.sun.star.logging import LogLevel
 from com.sun.star.logging.LogLevel import INFO
 from com.sun.star.logging.LogLevel import SEVERE
 
@@ -38,41 +37,41 @@ from com.sun.star.sdbc.DataType import VARCHAR
 from com.sun.star.sdbcx.CheckOption import CASCADE
 from com.sun.star.sdbcx.PrivilegeObject import TABLE
 
-from ..database import DataBase as DataBaseMain
+from .dbtool import Array
+from .dbtool import createUser
+from .dbtool import createViews
+from .dbtool import currentDateTimeInTZ
+from .dbtool import getDataFromResult
+from .dbtool import getDataSourceCall
+from .dbtool import getDataSourceConnection
+from .dbtool import getSequenceFromResult
+from .dbtool import getValueFromResult
 
-from ..dbtool import Array
-from ..dbtool import createUser
-from ..dbtool import createViews
-from ..dbtool import currentDateTimeInTZ
-from ..dbtool import getDataFromResult
-from ..dbtool import getDataSourceCall
-from ..dbtool import getDataSourceConnection
-from ..dbtool import getSequenceFromResult
-from ..dbtool import getValueFromResult
+from .unotool import checkVersion
+from .unotool import getConfiguration
+from .unotool import getSimpleFile
 
-from ..unotool import checkVersion
-from ..unotool import getConfiguration
-from ..unotool import getSimpleFile
+from .configuration import g_identifier
+from .configuration import g_host
 
-from ..configuration import g_identifier
-from ..configuration import g_host
+from .dbqueries import getSqlQuery
 
-from ..dbqueries import getSqlQuery
+from .dbconfig import g_catalog
+from .dbconfig import g_schema
+from .dbconfig import g_version
 
-from ..dbconfig import g_catalog
-from ..dbconfig import g_schema
-from ..dbconfig import g_version
-
-from ..dbinit import getDataBaseConnection
-from ..dbinit import createDataBase
+from .dbinit import getDataBaseConnection
+from .dbinit import createDataBase
 
 from collections import OrderedDict
 import json
 import traceback
 
 
-class DataBase(DataBaseMain):
+class DataBase():
     def __init__(self, ctx, logger, url, user='', pwd=''):
+        self._cls = 'DataBase'
+        mtd = '__init__'
         self._ctx = ctx
         self._statement = None
         self._fieldsMap = {}
@@ -83,7 +82,9 @@ class DataBase(DataBaseMain):
         connection = getDataBaseConnection(ctx, url, user, pwd, new)
         self._version = connection.getMetaData().getDriverVersion()
         if new and self.isUptoDate():
-            createDataBase(ctx, logger, connection, odb)
+            logger.logprb(INFO, self._cls, mtd, 1251)
+            createDataBase(ctx, connection, odb)
+            logger.logprb(INFO, self._cls, mtd, 1252)
         connection.close()
 
     @property

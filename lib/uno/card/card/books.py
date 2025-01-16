@@ -51,6 +51,9 @@ class Books(object):
     def setBook(self, uri, book):
         self._books[uri] = book
 
+    def setNewBook(self, uri, **kwargs):
+        self._books[uri] = Book(self._ctx, True, **kwargs)
+
     # Private methods
     def _getBooks(self, metadata, new):
         books = OrderedDict()
