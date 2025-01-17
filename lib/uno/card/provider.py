@@ -29,6 +29,9 @@
 
 import uno
 
+from com.sun.star.logging.LogLevel import INFO
+from com.sun.star.logging.LogLevel import SEVERE
+
 from .cardtool import getSqlException
 
 from .oauth20 import getRequest
