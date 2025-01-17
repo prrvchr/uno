@@ -143,9 +143,6 @@ class User(object):
     def unquoteUrl(self, url):
         return self.Request.unquoteUrl(url)
 
-    def getBooks(self):
-        return self._books.getBooks()
-
     def _isOffLine(self, server):
         return getConnectionMode(self._ctx, server) != ONLINE
 
