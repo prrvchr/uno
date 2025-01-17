@@ -101,9 +101,6 @@ class User(object):
     @property
     def BaseUrl(self):
         return self.Scheme + self.Server + self.Path
-    @property
-    def Books(self):
-        return self._books.values()
 
     def isOnLine(self):
         return self._isOnLine(self.Server)
@@ -123,6 +120,9 @@ class User(object):
 
     def hasBook(self, uri):
         return uri in self._books
+
+    def getBooks(self):
+        return self._books.values()
 
     def getBook(self, uri):
         return self._books[uri]
