@@ -33,6 +33,8 @@ from com.sun.star.logging.LogLevel import SEVERE
 from com.sun.star.ucb.ConnectionMode import OFFLINE
 from com.sun.star.ucb.ConnectionMode import ONLINE
 
+from .book import Book
+
 from ..cardtool import getSqlException
 from ..cardtool import getUserId
 from ..cardtool import getUserSchema
