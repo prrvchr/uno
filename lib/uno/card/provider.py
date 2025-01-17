@@ -78,7 +78,7 @@ class Provider():
         raise NotImplementedError
 
     # Method called from DataSource.getConnection()
-    def initAddressbooks(self, source, database, user):
+    def initAddressbooks(self, source, logger, database, user):
         raise NotImplementedError
 
     def initUserBooks(self, source, database, user, books):
@@ -94,10 +94,11 @@ class Provider():
                     modified = True
                     print("Provider.initUserBooks() 2 %s" % (name, ))
             else:
-                newid = database.insertBook(user.Id, uri, name, tag, token)
-                user.Books.setNewBook(uri, Book=newid, Uri=uri, Name=name, Tag=tag, Token=token)
-                modified = True
-                print("Provider.initUserBooks() 3 %s - %s - %s" % (user.Books.getBook(uri).Id, name, uri))
+                args = database.insertBook(user.Id, uri, name, tag, token)
+                if args:
+                    user.Books.setNewBook(uri, **args)
+                    modified = True
+                    print("Provider.initUserBooks() 3 %s - %s - %s" % (user.Books.getBook(uri).Id, name, uri))
             self.initUserGroups(source, database, user, uri)
             count += 1
         print("Provider.initUserBooks() 4")

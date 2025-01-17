@@ -333,10 +333,11 @@ class DataBase():
         if views.hasByName(view):
             views.dropByName(view)
 
-    def insertBook(self, user, path, name, tag=None, token=None):
+    def insertBook(self, userid, uri, name, tag=None, token=None):
+        book = None
         call = self._getCall('insertBook')
-        call.setInt(1, user)
-        call.setString(2, path)
+        call.setInt(1, userid)
+        call.setString(2, uri)
         call.setString(3, name)
         if tag is None:
             call.setNull(4, VARCHAR)
@@ -347,7 +348,9 @@ class DataBase():
         else:
             call.setString(5, token)
         call.executeUpdate()
-        book = call.getInt(6)
+        bookid = call.getInt(6)
+        if not call.wasNull():
+            book = {'Book': bookid, 'Uri': uri, 'Name': name, 'Tag': tag, 'Token': token}
         call.close()
         return book
 
