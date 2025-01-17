@@ -104,7 +104,7 @@ class Provider():
                     user.Books.setNewBook(uri, **args)
                     modified = True
                     print("Provider.initUserBooks() 3 %s - %s - %s" % (user.Books.getBook(uri).Id, name, uri))
-            self.initUserGroups(source, database, user, uri)
+            self.initUserGroups(source, logger, database, user, uri)
             count += 1
         print("Provider.initUserBooks() 4")
         if not count:
