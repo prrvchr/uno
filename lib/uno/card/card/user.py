@@ -33,8 +33,6 @@ from com.sun.star.logging.LogLevel import SEVERE
 from com.sun.star.ucb.ConnectionMode import OFFLINE
 from com.sun.star.ucb.ConnectionMode import ONLINE
 
-from .books import Books
-
 from ..cardtool import getSqlException
 from ..cardtool import getUserId
 from ..cardtool import getUserSchema
@@ -74,7 +72,7 @@ class User(object):
             database.createUser(getUserSchema(metadata), getUserId(metadata), name, '')
         self.Request = request
         self._metadata = metadata
-        self._books = Books(ctx, books, new)
+        self._books = {book.get('Uri'): Book(new, **book) for book in books}
         logger.logprb(INFO, self._cls, mtd, 1355, name)
 
     @property
@@ -99,11 +97,11 @@ class User(object):
     def Password(self):
         return self._password
     @property
-    def Books(self):
-        return self._books
-    @property
     def BaseUrl(self):
         return self.Scheme + self.Server + self.Path
+    @property
+    def Books(self):
+        return self._books.values()
 
     def isOnLine(self):
         return self._isOnLine(self.Server)
@@ -120,6 +118,15 @@ class User(object):
 
     def getSchema(self):
         return getUserSchema(self._metadata)
+
+    def hasBook(self, uri):
+        return uri in self._books
+
+    def getBook(self, uri):
+        return self._books[uri]
+
+    def setNewBook(self, uri, **kwargs):
+        self._books[uri] = Book(True, **kwargs)
 
     def hasSession(self):
         return len(self._sessions) > 0

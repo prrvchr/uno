@@ -243,7 +243,7 @@ class DataBase():
         uris = []
         names = []
         call = self._getCall('initGroups')
-        call.setInt(1, user.Books.getBook(uri).Id)
+        call.setInt(1, user.getBook(uri).Id)
         for uri, name in iterator:
             uris.append(uri)
             names.append(name)

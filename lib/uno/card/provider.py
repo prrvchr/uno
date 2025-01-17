@@ -91,8 +91,8 @@ class Provider():
         logger.logprb(INFO, self._cls, mtd, 1331, user.Name)
         for uri, name, tag, token in books:
             print("Provider.initUserBooks() 1 Name: %s - Uri: %s - Tag: %s - Token: %s" % (name, uri, tag, token))
-            if user.Books.hasBook(uri):
-                book = user.Books.getBook(uri)
+            if user.hasBook(uri):
+                book = user.getBook(uri)
                 if book.hasNameChanged(name):
                     database.updateAddressbookName(book.Id, name)
                     book.setName(name)
@@ -101,9 +101,9 @@ class Provider():
             else:
                 args = database.insertBook(user.Id, uri, name, tag, token)
                 if args:
-                    user.Books.setNewBook(uri, **args)
+                    user.setNewBook(uri, **args)
                     modified = True
-                    print("Provider.initUserBooks() 3 %s - %s - %s" % (user.Books.getBook(uri).Id, name, uri))
+                    print("Provider.initUserBooks() 3 %s - %s - %s" % (user.getBook(uri).Id, name, uri))
             self.initUserGroups(source, logger, database, user, uri)
             count += 1
         print("Provider.initUserBooks() 4")

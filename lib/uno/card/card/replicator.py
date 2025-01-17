@@ -111,6 +111,8 @@ class Replicator(Thread):
                             pages, count, args = self._provider.pullCard(self._database, user, book, pages, count)
                         if args:
                             logger.logprb(SEVERE, *args)
+                        else:
+                            book.resetNew()
                     logger.logprb(INFO, self._cls, mtd, 114, user.Name)
         except UnoException as e:
             logger.logprb(SEVERE, self._cls, mtd, 115, e.Message)

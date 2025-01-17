@@ -29,8 +29,6 @@
 
 import uno
 
-from com.sun.star.container import ElementExistException
-
 from com.sun.star.sdbc import SQLException
 from com.sun.star.sdbc import SQLWarning
 
@@ -563,10 +561,7 @@ def createViews(views, items):
         view.setPropertyValue('Name', name)
         view.setPropertyValue('Command', command)
         view.setPropertyValue('CheckOption', option)
-        try:
-            views.appendByDescriptor(view)
-        except ElementExistException:
-            pass
+        views.appendByDescriptor(view)
 
 def createTables(tables, items):
     for name, item in items:
