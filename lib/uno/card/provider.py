@@ -81,9 +81,11 @@ class Provider():
     def initAddressbooks(self, source, logger, database, user):
         raise NotImplementedError
 
-    def initUserBooks(self, source, database, user, books):
+    def initUserBooks(self, source, logger, database, user, books):
         count = 0
         modified = False
+        mtd = 'initUserBooks'
+        logger.logprb(INFO, self._cls, mtd, 1331, user.Name)
         for uri, name, tag, token in books:
             print("Provider.initUserBooks() 1 Name: %s - Uri: %s - Tag: %s - Token: %s" % (name, uri, tag, token))
             if user.Books.hasBook(uri):
@@ -106,8 +108,9 @@ class Provider():
             raise getSqlException(self._ctx, source, 1006, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
         if modified and self.supportAddressBook():
             database.initAddressbooks(user)
+        logger.logprb(INFO, self._cls, mtd, 1332, user.Name)
 
-    def initUserGroups(self, source, database, user, uri):
+    def initUserGroups(self, source, logger, database, user, uri):
         raise NotImplementedError
 
     def firstPullCard(self, database, user, addressbook, pages, count):
