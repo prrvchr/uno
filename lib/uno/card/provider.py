@@ -91,22 +91,18 @@ class Provider():
         mtd = 'initUserBooks'
         logger.logprb(INFO, self._cls, mtd, 1331, user.Name)
         for uri, name, tag, token in books:
-            print("Provider.initUserBooks() 1 Name: %s - Uri: %s - Tag: %s - Token: %s" % (name, uri, tag, token))
             if user.hasBook(uri):
                 book = user.getBook(uri)
                 if book.isRenamed(name):
                     database.updateAddressbookName(book.Id, name)
                     book.setName(name)
                     modified = True
-                    print("Provider.initUserBooks() 2 %s" % (name, ))
             else:
                 args = database.insertBook(user.Id, uri, name, tag, token)
                 book = user.setNewBook(uri, **args)
                 modified = True
-                print("Provider.initUserBooks() 3 %s - %s - %s" % (user.getBook(uri).Id, name, uri))
             self.initUserGroups(logger, database, user, book)
             count += 1
-        print("Provider.initUserBooks() 4")
         if not count:
             raise getSqlException(self._ctx, self._src, 1006, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
         if modified and self.supportAddressBook():
@@ -132,10 +128,10 @@ class Provider():
                 database.createGroupView(user, group)
         logger.logprb(INFO, self._cls, mtd, 1352, book.Name)
 
-    def firstPullCard(self, database, user, addressbook, pages, count):
+    def firstPullCard(self, database, user, book, pages, count):
         raise NotImplementedError
 
-    def pullCard(self, database, user, addressbook, pages, count):
+    def pullCard(self, database, user, book, pages, count):
         raise NotImplementedError
 
     def parseCard(self, database):
@@ -157,6 +153,6 @@ class Provider():
         return ['Provider', mtd, 201, parameter.Name, status, user, parameter.Url, msg]
 
     # Can be overwritten method
-    def syncGroups(self, database, user, addressbook, pages, count):
+    def syncGroups(self, database, user, book, pages, count):
         return pages, count, None
 
