@@ -77,18 +77,34 @@ class Provider():
     def getRequest(self, url, name):
         return getRequest(self._ctx, url, name)
 
+
+    # Method called from User.__init__()
+    def insertUser(self, logger, database, request, scheme, server, name, pwd):
+        mtd = 'insertUser'
+        logger.logprb(INFO, self._cls, mtd, 1301, name)
+        userid = self.getNewUserId(request, scheme, server, name, pwd)
+        logger.logprb(INFO, self._cls, mtd, 1302, userid, name)
+        return database.insertUser(userid, scheme, server, '', name)
+
     # Need to be implemented method
-    def insertUser(self, database, request, scheme, server, name, pwd):
+    def getNewUserId(self, request, scheme, server, name, pwd):
         raise NotImplementedError
 
     # Method called from DataSource.getConnection()
     def initAddressbooks(self, logger, database, user):
+        mtd = 'initAddressbooks'
+        logger.logprb(INFO, self._cls, mtd, 1321, user.Name)
+        books = getAddressbooks(logger, database, user)
+        self._initUserBooks(logger, database, user, books)
+        logger.logprb(INFO, self._cls, mtd, 1322, user.Name)
+
+    def getAddressbooks(self, logger, database, user):
         raise NotImplementedError
 
-    def initUserBooks(self, logger, database, user, books):
+    def _initUserBooks(self, logger, database, user, books):
         count = 0
         modified = False
-        mtd = 'initUserBooks'
+        mtd = '_initUserBooks'
         logger.logprb(INFO, self._cls, mtd, 1331, user.Name)
         for uri, name, tag, token in books:
             if user.hasBook(uri):
@@ -110,9 +126,13 @@ class Provider():
         logger.logprb(INFO, self._cls, mtd, 1332, user.Name)
 
     def initUserGroups(self, logger, database, user, book):
-        raise NotImplementedError
+        mtd = 'initUserGroups'
+        logger.logprb(INFO, self._cls, mtd, 1341, book.Name)
+        groups = self.getUserGroups(logger, database, user, book)
+        self._initUserGroup(logger, database, user, book, groups)
+        logger.logprb(INFO, self._cls, mtd, 1342, book.Name)
 
-    def initUserGroup(self, logger, database, user, book, groups):
+    def _initUserGroup(self, logger, database, user, book, groups):
         mtd = 'initUserGroup'
         logger.logprb(INFO, self._cls, mtd, 1351, book.Name)
         for uri, name in groups:
