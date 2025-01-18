@@ -68,7 +68,7 @@ class User(object):
             request = provider.getRequest(url, name)
             if request is None:
                 raise getSqlException(ctx, source, 1002, 1501, self._cls, mtd, name, g_extension)
-            metadata, books = provider.insertUser(source, logger, database, request, scheme, server, name, pwd)
+            metadata, books = provider.insertUser(logger, database, request, scheme, server, name, pwd)
             if metadata is None:
                 raise getSqlException(ctx, source, 1005, 1503, self._cls, mtd, name)
             database.createUser(getUserSchema(metadata), getUserId(metadata), name, '')
@@ -128,7 +128,9 @@ class User(object):
         return self._books[uri]
 
     def setNewBook(self, uri, **kwargs):
-        self._books[uri] = Book(True, **kwargs)
+        book = Book(True, **kwargs)
+        self._books[uri] = book
+        return book
 
     def hasSession(self):
         return len(self._sessions) > 0

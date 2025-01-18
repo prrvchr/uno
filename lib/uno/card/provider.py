@@ -42,9 +42,10 @@ from dateutil import tz
 import traceback
 
 class Provider():
-    def __init__(self, ctx):
+    def __init__(self, ctx, src):
         self._cls = 'Provider'
         self._ctx = ctx
+        self._src = src
 
     # Currently only vCardOOo supports multiple address books
     def supportAddressBook(self):
@@ -77,14 +78,14 @@ class Provider():
         return getRequest(self._ctx, url, name)
 
     # Need to be implemented method
-    def insertUser(self, source, database, request, scheme, server, name, pwd):
+    def insertUser(self, database, request, scheme, server, name, pwd):
         raise NotImplementedError
 
     # Method called from DataSource.getConnection()
-    def initAddressbooks(self, source, logger, database, user):
+    def initAddressbooks(self, logger, database, user):
         raise NotImplementedError
 
-    def initUserBooks(self, source, logger, database, user, books):
+    def initUserBooks(self, logger, database, user, books):
         count = 0
         modified = False
         mtd = 'initUserBooks'
@@ -93,28 +94,43 @@ class Provider():
             print("Provider.initUserBooks() 1 Name: %s - Uri: %s - Tag: %s - Token: %s" % (name, uri, tag, token))
             if user.hasBook(uri):
                 book = user.getBook(uri)
-                if book.hasNameChanged(name):
+                if book.isRenamed(name):
                     database.updateAddressbookName(book.Id, name)
                     book.setName(name)
                     modified = True
                     print("Provider.initUserBooks() 2 %s" % (name, ))
             else:
                 args = database.insertBook(user.Id, uri, name, tag, token)
-                if args:
-                    user.setNewBook(uri, **args)
-                    modified = True
-                    print("Provider.initUserBooks() 3 %s - %s - %s" % (user.getBook(uri).Id, name, uri))
-            self.initUserGroups(source, logger, database, user, uri)
+                book = user.setNewBook(uri, **args)
+                modified = True
+                print("Provider.initUserBooks() 3 %s - %s - %s" % (user.getBook(uri).Id, name, uri))
+            self.initUserGroups(logger, database, user, book)
             count += 1
         print("Provider.initUserBooks() 4")
         if not count:
-            raise getSqlException(self._ctx, source, 1006, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
+            raise getSqlException(self._ctx, self._src, 1006, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
         if modified and self.supportAddressBook():
             database.initAddressbooks(user)
         logger.logprb(INFO, self._cls, mtd, 1332, user.Name)
 
-    def initUserGroups(self, source, logger, database, user, uri):
+    def initUserGroups(self, logger, database, user, book):
         raise NotImplementedError
+
+    def initUserGroup(self, logger, database, user, book, groups):
+        mtd = 'initUserGroup'
+        logger.logprb(INFO, self._cls, mtd, 1351, book.Name)
+        for uri, name in groups:
+            if book.hasGroup(uri):
+                group = book.getGroup(uri)
+                if group.isRenamed(name):
+                    database.updateGroupName(book.Id, group.Id, name)
+                    database.renameGroupView(name, group.Name)
+                    group.setName(name)
+            else:
+                args = database.insertGroup(book.Id, uri, name)
+                group = book.setNewGroup(uri, **args)
+                database.createGroupView(user, group)
+        logger.logprb(INFO, self._cls, mtd, 1352, book.Name)
 
     def firstPullCard(self, database, user, addressbook, pages, count):
         raise NotImplementedError
@@ -125,13 +141,13 @@ class Provider():
     def parseCard(self, database):
         raise NotImplementedError
 
-    def raiseForStatus(self, source, mtd, response, user):
+    def raiseForStatus(self, mtd, response, user):
         name = response.Parameter.Name
         url = response.Parameter.Url
         status = response.StatusCode
         msg = response.Text
         response.close()
-        raise getSqlException(self._ctx, source, 1006, 1601, self._cls, mtd,
+        raise getSqlException(self._ctx, self._src, 1006, 1601, self._cls, mtd,
                               name, status, user, url, msg)
 
     def getLoggerArgs(self, response, mtd, parameter, user):
