@@ -94,7 +94,7 @@ class Provider():
     def initAddressbooks(self, logger, database, user):
         mtd = 'initAddressbooks'
         logger.logprb(INFO, self._cls, mtd, 1321, user.Name)
-        books = getAddressbooks(logger, database, user)
+        books = self.getAddressbooks(logger, database, user)
         self._initUserBooks(logger, database, user, books)
         logger.logprb(INFO, self._cls, mtd, 1322, user.Name)
 
