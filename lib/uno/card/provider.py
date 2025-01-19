@@ -144,7 +144,7 @@ class Provider():
                     group.setName(name)
             else:
                 args = database.insertGroup(book.Id, uri, name)
-                group = book.setNewGroup(uri, **args)
+                group = book.setNewGroup(uri, *args)
                 database.createGroupView(user, group)
         logger.logprb(INFO, self._cls, mtd, 1352, book.Name)
 

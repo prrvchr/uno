@@ -156,14 +156,13 @@ class DataBase():
 
     def insertUser(self, uri, scheme, server, path, name):
         metadata = None
-        books = []
         call = self._getCall('insertUser')
         call.setString(1, uri)
         call.setString(2, scheme)
         call.setString(3, server)
         call.setString(4, path)
         call.setString(5, name)
-        result = call.executeQuery()
+        call.execute()
         user = call.getInt(6)
         if not call.wasNull():
             metadata = {'User': user,
@@ -172,11 +171,8 @@ class DataBase():
                         'Server': server,
                         'Path': path,
                         'Name': name}
-            while result.next():
-                books.append(getDataFromResult(result))
-        result.close()
         call.close()
-        return metadata, books
+        return metadata, ()
 
     def createUser(self, schema, userid, name, password):
         try:
@@ -205,7 +201,7 @@ class DataBase():
 
     def selectUser(self, server, name):
         metadata = None
-        books = []
+        args = []
         call = self._getCall('selectUser')
         call.setString(1, server)
         call.setString(2, name)
@@ -219,10 +215,10 @@ class DataBase():
                         'Path': call.getString(6),
                         'Name': name}
             while result.next():
-                books.append(getDataFromResult(result))
+                args.append(getDataFromResult(result))
         result.close()
         call.close()
-        return metadata, books
+        return metadata, args
 
 # Procedures called by the User
     def getUserFields(self):
@@ -266,7 +262,7 @@ class DataBase():
         call.execute()
         group = call.getInt(4)
         if not call.wasNull():
-            args = {'Group': group, 'Uri': uri, 'Name': name}
+            args = (group, uri, name)
         call.close()
         return args
 

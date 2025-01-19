@@ -40,8 +40,8 @@ class Book():
         self._name = kwargs.get('Name')
         self._tag = kwargs.get('Tag')
         self._token = kwargs.get('Token')
-        groups = json.loads(kwargs.get('Groups', '[]'))
-        self._groups = {group.get('Uri'): Group(new, **group) for group in groups}
+        groups = (Group(new, *group) for group in json.loads(kwargs.get('Groups', '[]')))
+        self._groups = {group.Uri: group for group in groups}
 
     @property
     def Id(self):
@@ -74,8 +74,8 @@ class Book():
     def getGroup(self, uri):
         return self._groups[uri]
 
-    def setNewGroup(self, uri, **kwargs):
-        group = Group(True, **kwargs)
+    def setNewGroup(self, uri, *args):
+        group = Group(True, *args)
         self._groups[uri] = group
         return group
 

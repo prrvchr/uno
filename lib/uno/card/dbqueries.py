@@ -130,10 +130,7 @@ CREATE PROCEDURE "SelectUser"(IN SERVER VARCHAR(128),
   BEGIN ATOMIC
     DECLARE RSLT CURSOR WITH RETURN FOR
       SELECT B."Book", B."Uri", B."Name", B."Tag", B."Token",
-        JSON_ARRAYAGG(JSON_ARRAY(JSON_OBJECT('Group': G."Group"),
-                                 JSON_OBJECT('Uri': G."Uri"),
-                                 JSON_OBJECT('Name': G."Name"),
-                                 JSON_OBJECT('Token': G."Token"))) AS "Groups"
+        JSON_ARRAYAGG(JSON_ARRAY(G."Group", G."Uri", G."Name", G."Token")) AS "Groups"
       FROM "Users" AS U
       INNER JOIN "Books" AS B ON U."User" = B."User"
       LEFT JOIN "Groups" AS G ON B."Book" = G."Book"
@@ -155,23 +152,9 @@ CREATE PROCEDURE "InsertUser"(IN URI VARCHAR(256),
                               OUT USERID INTEGER)
   SPECIFIC "InsertUser_1"
   MODIFIES SQL DATA
-  DYNAMIC RESULT SETS 1
   BEGIN ATOMIC
-    DECLARE RSLT CURSOR WITH RETURN FOR
-      SELECT B."Book", B."Uri", B."Name", B."Tag", B."Token",
-        JSON_ARRAYAGG(JSON_ARRAY(JSON_OBJECT('Group': G."Group"),
-                                 JSON_OBJECT('Uri': G."Uri"),
-                                 JSON_OBJECT('Name': G."Name"),
-                                 JSON_OBJECT('Token': G."Token"))) AS "Groups"
-      FROM "Users" AS U
-      INNER JOIN "Books" AS B ON U."User" = B."User"
-      LEFT JOIN "Groups" AS G ON B."Book" = G."Book"
-      WHERE U."Server" = SERVER AND U."Name" = NAME
-      GROUP BY B."Book", B."Uri", B."Name", B."Tag", B."Token"
-    FOR READ ONLY;
     INSERT INTO "Users" ("Uri", "Scheme", "Server", "Path", "Name") VALUES (URI, SCHEME, SERVER, PATH, NAME);
     SET USERID = IDENTITY();
-    OPEN RSLT;
   END"""
 
     elif name == 'createInsertBook':

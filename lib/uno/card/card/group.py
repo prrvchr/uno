@@ -29,12 +29,12 @@
 
 
 class Group():
-    def __init__(self, new, **kwargs):
+    def __init__(self, new, group, uri, name, token=''):
         self._new = new
-        self._id = kwargs.get('Group')
-        self._uri = kwargs.get('Uri')
-        self._name = kwargs.get('Name')
-        self._token = kwargs.get('Token', '')
+        self._id = group
+        self._uri = uri
+        self._name = name
+        self._token = token
 
     @property
     def Id(self):
