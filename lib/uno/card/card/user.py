@@ -72,7 +72,7 @@ class User(object):
             if metadata is None:
                 raise getSqlException(ctx, source, 1005, 1503, self._cls, mtd, name)
             database.createUser(getUserSchema(metadata), getUserId(metadata), name, '')
-        self.Request = request
+        self._request = request
         self._metadata = metadata
         books = (Book(new, **kwargs) for kwargs in args)
         self._books = {book.Uri: book for book in books}
@@ -102,9 +102,13 @@ class User(object):
     @property
     def BaseUrl(self):
         return self.Scheme + self.Server + self.Path
+    @property
+    def Request(self):
+        return self._request
 
     def isOnLine(self):
         return self._isOnLine(self.Server)
+
     def isOffLine(self):
         return self._isOffLine(self.Server)
 

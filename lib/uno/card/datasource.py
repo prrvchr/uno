@@ -108,9 +108,3 @@ class DataSource():
         connection.addEventListener(self._listener)
         return connection
 
-    def _hasSession(self):
-        for user in self._users.values():
-            if user.hasSession():
-                return True
-        return False
-
