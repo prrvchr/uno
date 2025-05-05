@@ -35,9 +35,9 @@ from com.sun.star.ucb.ConnectionMode import ONLINE
 
 from .book import Book
 
-from ..cardtool import getSqlException
-from ..cardtool import getUserId
-from ..cardtool import getUserSchema
+from ..helper import getSqlException
+from ..helper import getUserId
+from ..helper import getUserSchema
 
 from ..unotool import getConnectionMode
 

@@ -41,7 +41,7 @@ from .card import TerminateListener
 
 from .unotool import getDesktop
 
-from .cardtool import getSqlException
+from .helper import getSqlException
 
 
 from threading import Event
