@@ -76,7 +76,6 @@ class Driver(unohelper.Base,
     def __init__(self, ctx, lock, logger, service, implementation, services):
         self._ctx = ctx
         self._lock = lock
-        print("Driver.__init__() service: %s ******************************************************" % service)
         self._driver = createService(ctx, service)
         self._implementation = implementation
         self._services = services
@@ -151,7 +150,6 @@ class Driver(unohelper.Base,
         config = getConfiguration(self._ctx, g_identifier)
         rowset = config.getByName('CachedRowSet')
         system = config.getByName('ShowSystemTable')
-        print("SQLiteOOo.Driver._getConnectionInfo() Url: %s" % g_url)
         newinfos = {'Url': g_url, 'CachedRowSet': rowset, 'ShowSystemTable': system}
         if g_user:
             newinfos['user'] = g_user
