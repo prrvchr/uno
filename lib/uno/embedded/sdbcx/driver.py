@@ -50,16 +50,15 @@ class Driver(DriverBase,
 
     # XDataDefinitionSupplier
     def getDataDefinitionByConnection(self, connection):
-        self._logger.logprb(INFO, 'Driver', 'getDataDefinitionByConnection()', 151)
         try:
+            self._logger.logprb(INFO, 'Driver', 'getDataDefinitionByConnection()', 151)
             data = None
             if connection.supportsService("com.sun.star.sdbcx.DatabaseDefinition"):
                 data = connection
             return data
         except SQLException as e:
-            raise e
-        except Exception as e:
             self._logger.logprb(SEVERE, 'Driver', 'getDataDefinitionByConnection()', 152, e, traceback.format_exc())
+            raise e
 
     def getDataDefinitionByURL(self, url, infos):
         self._logger.logprb(INFO, 'Driver', 'getDataDefinitionByURL()', 161, url)
