@@ -42,7 +42,7 @@ class OptionsView():
         control.URL = url
         control.Model.PositionY += offset
         self._getRestart().Model.PositionY += offset
-        self.setWarning(restart, instrumented)
+        self._setWarning(control, restart, instrumented)
 
 # OptionsView getter methods
     def getViewData(self):
@@ -56,12 +56,7 @@ class OptionsView():
         self._getViewName().Text = view
 
     def setWarning(self, restart, instrumented):
-        if restart:
-            self._getWarning().setVisible(False)
-            self._getRestart().setVisible(True)
-        else:
-            self._getRestart().setVisible(False)
-            self._getWarning().setVisible(not instrumented)
+        self._setWarning(self._getWarning(), restart, instrumented)
 
 # OptionsView private setter methods
     def _setViewName(self, view, disabled):
@@ -69,6 +64,14 @@ class OptionsView():
         control = self._getViewName()
         control.Model.Enabled = disabled
         control.Text = view
+
+    def _setWarning(self, control, restart, instrumented):
+        if restart:
+            control.setVisible(False)
+            self._getRestart().setVisible(True)
+        else:
+            self._getRestart().setVisible(False)
+            control.setVisible(not instrumented)
 
 # OptionsView private control methods
     def _getTimeout(self):
