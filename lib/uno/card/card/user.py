@@ -39,8 +39,6 @@ from ..helper import getSqlException
 from ..helper import getUserId
 from ..helper import getUserSchema
 
-from ..oauth20 import getOAuth2UserName
-
 from ..unotool import getConnectionMode
 
 from ..configuration import g_extension
@@ -57,7 +55,6 @@ class User(object):
         self._sessions = []
         logger.logprb(INFO, self._cls, mtd, 1502, name)
         metadata, args = database.selectUser(server, name)
-        u = getOAuth2UserName(ctx, source, url)
         new = metadata is None
         if not new:
             logger.logprb(INFO, self._cls, mtd, 1503, name)
