@@ -55,8 +55,9 @@ import traceback
 
 
 class SetupModel():
-    def __init__(self, ctx, name):
+    def __init__(self, ctx, job, name):
         self._ctx = ctx
+        self._job = job
         self._modules = []
         self._requirements = '/requirements.txt'
         self._program = getPathSubstitution(ctx, '$(prog)')
@@ -78,7 +79,8 @@ class SetupModel():
         url = self._url + self._requirements
         if getSimpleFile(self._ctx).exists(url):
             self._checkPackages(url, maxProgress, progress)
-        return self._getResult(self._modules)
+        success = len(self._modules) > 0
+        return success, self._getResult(self._modules)
 
     def installPackages(self, maxProgress, progress):
         index = 1
@@ -102,10 +104,10 @@ class SetupModel():
         return success, self._getResult(self._modules) if success else self._getResult(modules)
 
     def deregisterJob(self):
-        path = "/org.openoffice.Office.Jobs/Events/OnStartApp/JobList"
+        path = '/org.openoffice.Office.Jobs/Events/OnStartApp/JobList'
         config = getConfiguration(self._ctx, path, True)
-        if config.hasByName("OAuth2Setup"):
-            config.removeByName("OAuth2Setup")
+        if config.hasByName(self._job):
+            config.removeByName(self._job)
             config.commitChanges()
 
     def _checkPackages(self, url, maxProgress, progress):
