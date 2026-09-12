@@ -37,8 +37,8 @@ import traceback
 
 
 class SetupManager():
-    def __init__(self, ctx, job, name):
-        self._model = SetupModel(ctx, job, name)
+    def __init__(self, ctx, job, name, code):
+        self._model = SetupModel(ctx, job, name, code)
         self._view = SetupView(ctx, WindowHandler(self), name, self._model.getTitle())
 
     def cancel(self):
