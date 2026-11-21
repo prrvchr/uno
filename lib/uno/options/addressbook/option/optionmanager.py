@@ -44,7 +44,7 @@ from ...configuration import g_synclog
 
 
 class OptionManager():
-    def __init__(self, ctx, logger, window, config):
+    def __init__(self, ctx, window, config, logger):
         self._ctx = ctx
         self._model = OptionModel(ctx, config)
         self._view = OptionView(ctx, window, OptionHandler(self), self._model.getViewData())

@@ -57,7 +57,7 @@ from ..configuration import g_extension
 
 
 class OptionsManager():
-    def __init__(self, ctx, logger, window):
+    def __init__(self, ctx, window, logger):
         self._ctx = ctx
         self._checker = None
         self._disposed = False
@@ -65,7 +65,7 @@ class OptionsManager():
         self._agent = g_service, g_protocol, g_agent
         self._model = OptionsModel(ctx)
         self._view = OptionsView(ctx, window)
-        self._manager = OptionManager(ctx, logger, self._view.getFrame(), self._model.getConfig())
+        self._manager = OptionManager(ctx, self._view.getFrame(), self._model.getConfig(), logger)
         self._setup = SetupManager(ctx, self._view.getSetup(), SetupHandler(self), self._model.getConfig())
         self._listener = OptionsListener(self)
         window.addEventListener(self._listener)
