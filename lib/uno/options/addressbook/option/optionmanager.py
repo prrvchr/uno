@@ -68,6 +68,10 @@ class OptionManager():
     def refresh(self, state):
         self._view.refreshView(state)
 
+    def dispose(self):
+        self._logmanager.dispose()
+        self._view.dispose()
+
     def saveSetting(self):
         option = self._model.setViewData(*self._view.getViewData())
         saved = self._logmanager.saveSetting()
