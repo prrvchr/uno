@@ -81,6 +81,10 @@ class Driver(unohelper.Base,
     def createCatalog(self, info):
         pass
 
+# XDropCatalog
+    def dropCatalog(self, name, info):
+        pass
+
 # XDataDefinitionSupplier
     def getDataDefinitionByConnection(self, connection):
         return connection
@@ -109,8 +113,7 @@ class Driver(unohelper.Base,
             raise getLogException(self._logger, self, 1005, 1116, self._cls, mtd, str(e), traceback.format_exc())
 
     def acceptsURL(self, url):
-        accept = url.startswith(self._supportedProtocol)
-        return accept
+        return url and url.startswith(self._supportedProtocol)
 
     def getPropertyInfo(self, url, _infos):
         properties = ()
@@ -123,10 +126,6 @@ class Driver(unohelper.Base,
 
     def getMinorVersion(self):
         return 0
-
-# XDropCatalog
-    def dropCatalog(self, name, info):
-        pass
 
 # XServiceInfo
     def supportsService(self, service):

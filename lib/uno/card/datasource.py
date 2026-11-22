@@ -37,7 +37,7 @@ from .database import DataBase
 
 from .provider import Provider
 
-from .setup import SetupCheck
+from .setup import Check
 
 from .card import EventListener
 from .card import User
@@ -136,6 +136,6 @@ class DataSource():
         java = g_extension, g_java, g_script
         agent = g_service, g_protocol, g_agent
         database = getDataSourceUrl(ctx)
-        state = SetupCheck.getState(ctx, database=database, java=java, agent=agent, python=True, extensions=getExtensions())
+        state = Check.getState(ctx, database=database, java=java, agent=agent, python=True, extensions=getExtensions())
         if not state.runnable:
             raise SQLException(state.getMessage(ctx), source, '08001', state.code, None)
