@@ -35,9 +35,9 @@ from .optionview import OptionView
 
 from .optionhandler import OptionHandler
 
-from ...unotool import getDesktop
+from ..logger.logmanager import LogManager
 
-from ..logger import LogManager
+from ...unotool import getDesktop
 
 from ...configuration import g_defaultlog
 from ...configuration import g_synclog

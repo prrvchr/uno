@@ -29,7 +29,7 @@
 
 import uno
 
-from ..runner import RunnerException
+from ..runner.error import RunnerException
 
 from ..unotool import checkVersion
 from ..unotool import createService

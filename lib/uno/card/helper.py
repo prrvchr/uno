@@ -36,15 +36,15 @@ from .unotool import executeDesktopDispatch
 from .unotool import getDesktop
 from .unotool import getNamedValue
 
-from .logger import getLogger
+from .logger.helper import getLogger
 
-from .oauth20 import g_identifier as g_identifier1
-from .oauth20 import g_extension as g_extension1
-from .oauth20 import g_version as g_version1
+from .oauth20.configuration import g_identifier as g_identifier1
+from .oauth20.configuration import g_extension as g_extension1
+from .oauth20.configuration import g_version as g_version1
 
-from .jdbcdriver import g_identifier as g_identifier2
-from .jdbcdriver import g_extension as g_extension2
-from .jdbcdriver import g_version as g_version2
+from .jdbcdriver.configuration import g_identifier as g_identifier2
+from .jdbcdriver.configuration import g_extension as g_extension2
+from .jdbcdriver.configuration import g_version as g_version2
 
 from .configuration import g_basename
 from .configuration import g_defaultlog
