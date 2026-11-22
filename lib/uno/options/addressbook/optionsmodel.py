@@ -34,11 +34,11 @@ from ..configuration import g_identifier
 
 
 class OptionsModel():
-    def __init__(self, ctx):
+    def __init__(self, ctx, label='Label1'):
         self._ctx = ctx
         self._config = getConfiguration(ctx, g_identifier, True)
         self._resolver = getStringResource(ctx, g_identifier, 'dialogs', 'OptionsDialog')
-        self._resources = {'Link': 'OptionsDialog.Label1.Url.%s'}
+        self._resources = {'Link': 'OptionsDialog.' + label + '.Url.%s'}
 
 # OptionsModel getter methods
     def getConfig(self):
