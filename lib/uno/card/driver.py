@@ -27,7 +27,7 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from .card import Driver as DriverBase
+from .card.driver import Driver as DriverBase
 
 from .helper import getLogException
 
