@@ -33,26 +33,28 @@ from .optionsview import OptionsView
 
 from .optionshandler import OptionsListener
 
-from .option import OptionManager
+from .option.optionmanager import OptionManager
 
-from .setup import SetupHandler
-from .setup import SetupManager
+from .setup.setuphandler import SetupHandler
 
-from ..runner import DispatchListener
+from .setup.setupmanager import SetupManager
 
-from ..setup import SetupCheck
+from ..runner.listener import DispatchListener
 
-from ..setup import showSetup
+from ..setup.setupcheck import SetupCheck
+
+from ..configuration import State
+
+from ..setup.helper import showSetup
 
 from ..helper import getExtensions
 
-from ..jdbcdriver import g_agent
-from ..jdbcdriver import g_java
-from ..jdbcdriver import g_protocol
-from ..jdbcdriver import g_script
-from ..jdbcdriver import g_service
+from ..jdbcdriver.configuration import g_agent
+from ..jdbcdriver.configuration import g_java
+from ..jdbcdriver.configuration import g_protocol
+from ..jdbcdriver.configuration import g_script
+from ..jdbcdriver.configuration import g_service
 
-from ..configuration import State
 from ..configuration import g_extension
 
 
