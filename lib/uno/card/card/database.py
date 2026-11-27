@@ -63,7 +63,7 @@ import traceback
 
 
 class DataBase():
-    def __init__(self, ctx, logger=None):
+    def __init__(self, ctx, logger):
         self._cls = 'DataBase'
         self._ctx = ctx
         self._logger = logger
