@@ -51,11 +51,12 @@ from .helper import createOdbDocument
 from .helper import createRoleAndPrivileges
 from .helper import createViews
 from .helper import executeQueries
+from .helper import getConnection
 from .helper import getConnectionInfos
 from .helper import getDataBaseForeignKeys
 from .helper import getDataBaseIndexes
 from .helper import getDataBaseTables
-from .helper import getDriverConnection
+from .helper import getDriver
 from .helper import getDriverInfos
 
 from ..unotool import checkVersion
@@ -135,11 +136,12 @@ class DBTask(Task):
 
     def stepGetConnection(self, ctx, user, pwd, infos):
         try:
+            driver = getDriver(ctx)
             if self._exists:
                 drvinfos = infos
             else:
-                drvinfos = getDriverInfos(ctx, self._url, g_drvinfos, infos=infos)
-            self._connection = getDriverConnection(ctx, self._url, user=user, pwd=pwd, infos=drvinfos)
+                drvinfos = getDriverInfos(driver, self._url, g_drvinfos, infos=infos)
+            self._connection = getConnection(driver, self._url, user=user, pwd=pwd, infos=drvinfos)
         except Exception as e:
             trace = traceback.format_exc()
             raise RunnerException(e, trace)

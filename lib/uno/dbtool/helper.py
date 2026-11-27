@@ -108,15 +108,24 @@ def checkConnection(connection, version, minimum, new):
     return True
 
 
-def getDriverConnection(ctx, url, user='', pwd='', logger=None, infos=None, level=2):
-    log = logger.Logger if logger else None
-    driver = createService(ctx, g_drivers, level, log)
+def getDriver(ctx, logger=None, level=2):
+    log = getattr(logger, 'Logger', None) if logger else None
+    return createService(ctx, g_drivers, level, log)
+
+
+def getConnection(driver, url, user='', pwd='', infos=None):
     drvinfos = dict(infos) if infos else {}
     if user:
         drvinfos['user'] = user
     if pwd:
         drvinfos['password'] = pwd
-    return driver.connect(getDataBaseUrl(url), getPropertyValueSet(drvinfos))
+    props = getPropertyValueSet(drvinfos)
+    return driver.connect(getDataBaseUrl(url), props)
+
+
+def getDriverConnection(ctx, url, user='', pwd='', logger=None, infos=None, level=2):
+    driver = getDriver(ctx, logger, level)
+    return getConnection(driver, url, user, pwd, infos)
 
 
 def cleanDataBaseFolder(sf, odb, path):
@@ -914,18 +923,16 @@ def _getPrivilegeType(column):
 
 
 # FIXME: ***
-def getDriverInfos(ctx, location, options, logger=None, infos=None):
+def getDriverInfos(driver, location, options, infos=None):
     drvinfos = dict(infos) if infos else {}
     properties = getDefaultPropertyValueSet(options, '')
-    for name, value in _getDriverPropertyInfo(ctx, location, properties, options, logger):
+    for name, value in _getDriverPropertyInfo(driver, location, properties, options):
         drvinfos[name] = value
     return drvinfos if drvinfos else None
 
 
-def _getDriverPropertyInfo(ctx, location, properties, options, logger=None, level=2):
+def _getDriverPropertyInfo(driver, location, properties, options):
     url = g_protocol + location
-    log = logger.Logger if logger else None
-    driver = createService(ctx, g_drivers, level, log)
     for info in driver.getPropertyInfo(url, properties):
         if info.Name in options:
             yield info.Name, options[info.Name](info)
