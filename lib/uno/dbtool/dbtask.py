@@ -111,6 +111,9 @@ class DBTask(Task):
         if self._callback:
             self._callback(self._getSuccess(success), error)
 
+    def getStepFinalize(self):
+        return self._getStepFinalize(None)
+
     def getSetupSteps(self, ctx, user, pwd, infos):
         if not self._exists:
             yield self._getStepGetStepCount(ctx)
@@ -254,7 +257,7 @@ class DBTask(Task):
                 self._statement.close()
                 self._statement = None
             if self._connection:
-                if self._created:
+                if ctx and self._created:
                     createOdbDocument(ctx, self._connection, self._odb)
                     self._success = True
                 self._connection.close()
