@@ -102,7 +102,7 @@ class DataSource():
             name = self._maps.get(uri)
             user = self._users.get(name)
             if not user.Request.isAuthorized():
-                raise getSqlException(self._ctx, source, 1002, 1401, self._cls, mtd, name, g_extension)
+                raise getSqlException(self._ctx, source, 1003, 1401, self._cls, mtd, name, g_extension)
         else:
             user = User(self._ctx, source, logger, self._database, self._provider, scheme, url, server, username, token)
             name = user.getName()
@@ -110,7 +110,7 @@ class DataSource():
             try:
                 self._provider.initAddressbooks(self._database, user)
             except UnoException as ex:
-                e = getSqlException(self._ctx, source, 1001, 1402, self._cls, mtd, name, g_extension)
+                e = getSqlException(self._ctx, source, 1003, 1402, self._cls, mtd, name, g_extension)
                 e.NextException = ex
                 raise e
         connection = self._database.getConnection(user=name, infos=self._getUserInfos(name))

@@ -33,20 +33,18 @@ import unohelper
 from com.sun.star.logging.LogLevel import ALL
 from com.sun.star.logging.LogLevel import OFF
 
+from com.sun.star.awt import XCallback
+
 from com.sun.star.logging import XLogHandler
 
+from .helper import getRollerHandlerUrl
+
 from ..unotool import createService
-from ..unotool import getResourceLocation
+from ..unotool import getCallBack
 from ..unotool import getSimpleFile
 
-from ..configuration import g_identifier
-
-g_folderlog = 'log'
-
-
-def getRollerHandlerUrl(ctx, name):
-    path = '%s/%s.log' % (g_folderlog, name)
-    return getResourceLocation(ctx, g_identifier, path)
+from threading import Lock
+from threading import Timer
 
 
 class BaseHandler(unohelper.Base,
@@ -142,17 +140,55 @@ class RollerHandler(BaseHandler):
 
 
 class ViewHandler(BaseHandler):
-    def __init__(self, ctx, callback, level=ALL):
+    def __init__(self, ctx, callback, level=ALL, delay=0.05):
         super().__init__(ctx, level)
         self._callback = callback
+        self._delay = delay
+        self._async = getCallBack(ctx)
+        self._lock = Lock()
+        self._buffer = []
+        self._scheduled = False
+        self._timer = None
 
     def publish(self, record):
         if self._level <= record.Level < OFF and self._callback:
             msg = self._formatter.format(record)
-            self._callback(msg)
+            with self._lock:
+                self._buffer.append(msg)
+                if not self._scheduled:
+                    self._scheduled = True
+                    self._timer = Timer(self._delay, self._scheduleAsync)
+                    self._timer.daemon = True
+                    self._timer.start()
             return True
         return False
 
+    def flush(self):
+        with self._lock:
+            text = ''.join(self._buffer)
+            self._buffer.clear()
+            self._scheduled = False
+        if text and self._callback:
+            self._callback(text)
+
     def dispose(self):
-        self._callback = None
+        with self._lock:
+            self._callback = None
+            self._buffer.clear()
+            if self._timer:
+                self._timer.cancel()
+                self._timer = None
         super().dispose()
+
+    def _scheduleAsync(self):
+        if self._callback:
+            self._async.addCallback(ViewCallback(self.flush), None)
+
+
+class ViewCallback(unohelper.Base,
+                   XCallback):
+    def __init__(self, flush):
+        self._flush = flush
+
+    def notify(self, _data):
+        self._flush()

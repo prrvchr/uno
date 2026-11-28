@@ -45,7 +45,7 @@ from ..task.replicator import Replicator
 
 from ...dbsetup import DBSetup
 
-from ...logger.logcontroller import LogController
+from ...logger.logwrapper import LogWrapper
 
 from ...runner.cancel import Cancel
 
@@ -88,7 +88,7 @@ class ReplicatorManager():
         self._view = ReplicatorView(ctx, WindowHandler(self), self._closelistener, *self._model.getViewData())
         self._terminatelistener = TerminateListener(self)
         getDesktop(ctx).addTerminateListener(self._terminatelistener)
-        self._logger = LogController(ctx, g_synclog)
+        self._logger = LogWrapper(ctx, g_synclog)
         self._logger.addRollerHandler()
         self._handler = ViewHandler(ctx, self.updateLog)
         self._logger.addLogHandler(self._handler)

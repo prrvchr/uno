@@ -63,10 +63,7 @@ class SetupView():
             self._frame.setComponent(self._window, None)
             self._frame.addCloseListener(listener)
             setWindowPosSize(ctx, window, self._window, possize)
-            controls = self._getResultText(), self._getErrorText()
-            horizontals = self._getHorizontalControls()
-            bottoms = self._getCancelButton(), self._getNextButton()
-            self._window.addWindowListener(Layout(self._window, controls=controls, horizontals=horizontals, bottoms=bottoms))
+            self._window.addWindowListener(Layout(self._window, **self._getLayouts()))
             self._frame.setTitle(title)
         self._window.setVisible(True)
         window.setVisible(True)
@@ -139,11 +136,24 @@ class SetupView():
         self._window.Model.Step = step
         self._getPageHeader(step).Text = header
 
-    def _getHorizontalControls(self):
-        horizontals = [self._getProgressBar(), self._getProgressText()]
-        for sep in range(1, 5):
-            horizontals.append(self._getPageHeader(sep))
-        return horizontals
+    def _getLayouts(self):
+        return {'horizontals': self._getHorizontals(),
+                'controls': self._getControls(),
+                'bottoms': self._getButtoms()}
+
+    def _getControls(self):
+        yield self._getResultText()
+        yield self._getErrorText()
+
+    def _getHorizontals(self):
+        yield self._getProgressBar()
+        yield self._getProgressText()
+        for index in range(1, 5):
+            yield self._getPageHeader(index)
+
+    def _getButtoms(self):
+        yield self._getCancelButton()
+        yield self._getNextButton()
 
 # SetupView private control methods
     def _getPageHeader(self, step):

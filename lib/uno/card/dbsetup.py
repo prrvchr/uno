@@ -41,7 +41,7 @@ from .configuration import g_protocol
 
 class DBSetup(DBTask):
     def __init__(self, ctx, user='', pwd=''):
-        infos = {'Url': g_protocol, 'Admin': True}
+        infos = {'Url': g_protocol + 'admin'}
         super().__init__(ctx, getDataBasePath(ctx), getDataBaseName(), user, pwd, infos)
 
     def _getSetupSteps(self, ctx, count=False):

@@ -27,64 +27,54 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import uno
+import unohelper
 
-from com.sun.star.logging.LogLevel import SEVERE
+from com.sun.star.awt import XContainerWindowEventHandler
 
-from .logwrapper import LogWrapper
+from com.sun.star.util import XCloseListener
 
-from .logconfig import LogConfig
-
-from .loghandler import RollerHandler
-
-from ..unotool import getStringResourceWithLocation
-
-from ..configuration import g_basename
+import traceback
 
 
-# XXX: This LogController allows to use a deletable log file as used in eMailerOOo
-class LogController(LogWrapper):
-    def __init__(self, ctx, name, basename=g_basename, listener=None):
-        super().__init__(ctx, name, basename)
-        self._listener = listener
-        self._setting = None
-        self._config = LogConfig(ctx)
-        self._handler = None
-        if listener:
-            self._logger.addModifyListener(listener)
+class WindowHandler(unohelper.Base,
+                    XContainerWindowEventHandler):
+    def __init__(self, manager):
+        self._manager = manager
 
-    # Public getter method
-    def getLogContent(self, roller=False):
-        return self._config.getLoggerContent(self.Name, roller)
+    # XContainerWindowEventHandler
+    def callHandlerMethod(self, _dialog, _event, method):
+        try:
+            handled = False
+            if method == 'LogInfos':
+                self._manager.logInfos()
+                handled = True
+            elif method == 'ClearLog':
+                self._manager.clearLog()
+                handled = True
+            elif method == 'CloseLog':
+                self._manager.closeLog()
+                handled = True
+            return handled
+        except Exception:
+            print("DialogHandler.callHandlerMethod() ERROR: %s" % traceback.format_exc())
 
-    # Public setter method
-    def dispose(self):
-        if self._listener is not None:
-            self._logger.removeModifyListener(self._listener)
+    def getSupportedMethodNames(self):
+        return ('LogInfos',
+                'ClearLog',
+                'CloseLog')
 
-    def addRollerHandler(self, handler=None):
-        if handler is None:
-            handler = RollerHandler(self._ctx, self.Name)
-        super().addRollerHandler(handler)
-        self._handler = handler
-        if self._listener:
-            event = uno.createUnoStruct('com.sun.star.lang.EventObject', self._logger)
-            self._listener.modified(event)
 
-    def removeRollerHandler(self, handler=None):
-        if handler is None:
-            handler = self._handler
-        super().removeRollerHandler(handler)
+class CloseListener(unohelper.Base,
+                    XCloseListener):
+    def __init__(self, manager):
+        self._manager = manager
 
-    def clearLogger(self):
-        if self._handler:
-            self._handler.clearLogger()
-            resolver = getStringResourceWithLocation(self._ctx, self._url, 'Logger')
-            msg = resolver.resolveString(111)
-            self._logger.logp(SEVERE, 'Logger', 'clearLogger', msg)
+    # XCloseListener
+    def queryClosing(self, event, ownership):
+        self._manager.queryClosing(event.Source, ownership)
 
-    def addModifyListener(self, listener):
-        self._logger.addModifyListener(listener)
+    def notifyClosing(self, event):
+        self._manager.notifyClosing(event.Source)
 
-    def removeModifyListener(self, listener):
-        self._logger.removeModifyListener(listener)
+    def disposing(self, event):
+        pass

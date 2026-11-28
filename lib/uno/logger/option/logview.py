@@ -27,28 +27,22 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-import uno
-
 from ...unotool.layout import Layout
 
 from ...unotool import getContainerWindow
-from ...unotool import getDialog
 
 from ...configuration import g_identifier
 
 
 class LogWindow():
     def __init__(self, ctx, window, handler):
-        self._window = getContainerWindow(ctx, window.getPeer(), handler, g_identifier, 'LogWindow')
+        self._window = getContainerWindow(ctx, window.getPeer(), handler, g_identifier, 'LogOption')
         self._layout = Layout(self._window, **self._getLayouts())
         self._window.setVisible(True)
 
 # LogWindow getter methods
     def getLayout(self):
         return self._layout
-
-    def getParent(self):
-        return self._window.getPeer()
 
     def getLogger(self):
         return self._getLoggers().getSelectedItem()
@@ -67,8 +61,10 @@ class LogWindow():
 
     def initView(self, loggers):
         control = self._getLoggers()
+        position = control.getSelectedItemPos()
         control.Model.StringItemList = loggers
-        control.selectItemPos(0, True)
+        index = position if position != -1 else 0
+        control.selectItemPos(index, True)
 
     def setLogger(self, logger):
         self._getLoggers().selectItem(logger, True)
@@ -95,8 +91,16 @@ class LogWindow():
         self.enableViewer(enabled and control.State)
 
     def _getLayouts(self):
-        return {'horizontals': (self._getFixedLine(), self._getLoggers(), self._getLevel()),
-                'tops': (self._getLogger(), )}
+        return {'horizontals': self._getHorizontals(),
+                'tops': self._getTops()}
+
+    def _getHorizontals(self):
+        yield self._getFixedLine()
+        yield self._getLoggers()
+        yield self._getLevel()
+
+    def _getTops(self):
+        yield self._getLogger()
 
 # LogWindow private control methods
     def _getFixedLine(self):
@@ -128,27 +132,3 @@ class LogWindow():
 
     def _getViewer(self):
         return self._window.getControl('CommandButton1')
-
-
-class LogDialog():
-    def __init__(self, ctx, handler, parent, url, text, length):
-        self._dialog = getDialog(ctx, g_identifier, 'LogDialog', handler, parent)
-        self._dialog.Title = url
-        self.updateLogger(text, length)
-
-# LogDialog setter methods
-    def execute(self):
-        self._dialog.execute()
-
-    def dispose(self):
-        self._dialog.dispose()
-
-    def updateLogger(self, text, length):
-        control = self._getLogger()
-        control.Text = text
-        selection = uno.createUnoStruct('com.sun.star.awt.Selection', length, length)
-        control.setSelection(selection)
-
-# LogDialog private control methods
-    def _getLogger(self):
-        return self._dialog.getControl('TextField1')

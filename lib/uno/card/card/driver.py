@@ -109,20 +109,21 @@ class Driver(unohelper.Base,
         try:
             mtd = 'connect'
             self._logger.logprb(INFO, self._cls, mtd, 1111, url)
-            if self._isAdminConnection(infos):
-                print("Driver.connect() 1 ")
+            if not self.acceptsURL(url):
+                raise getLogException(self._logger, self, 1000, 1112, self._cls, mtd, url)
+            protocols = self._getProtocols(url, mtd)
+            if self._isAdminConnection(protocols):
                 connection = self._getDataSource(mtd).getAdminConnection()
-                print("Driver.connect() 2 ")
             else:
-                params = self._getConnectionParams(url, infos, mtd)
+                params = self._getConnectionParams(protocols, url, infos, mtd)
                 connection = self._getDataSource(mtd).getConnection(self, self._logger, *params)
             metadata = connection.getMetaData()
-            self._logger.logprb(INFO, self._cls, mtd, 1115, metadata.getDriverVersion(), metadata.getUserName())
+            self._logger.logprb(INFO, self._cls, mtd, 1118, metadata.getDriverVersion(), metadata.getUserName())
             return connection
         except SQLException as e:
             raise
         except Exception as e:
-            raise getLogException(self._logger, self, 1005, 1116, self._cls, mtd, str(e), traceback.format_exc())
+            raise getLogException(self._logger, self, 1006, 1119, self._cls, mtd, str(e), traceback.format_exc())
 
     def acceptsURL(self, url):
         return url and url.startswith(g_protocol)
@@ -152,11 +153,14 @@ class Driver(unohelper.Base,
         return self._services
 
 # Private getter methods
-    def _isAdminConnection(self, infos):
-        return any(p.Name == 'Admin' and bool(p.Value) for p in infos)
-
-    def _getConnectionParams(self, url, infos, mtd):
+    def _getProtocols(self, url, mtd):
         raise NotImplementedError
+
+    def _getConnectionParams(self, protocols, url, infos, mtd):
+        raise NotImplementedError
+
+    def _isAdminConnection(self, protocols):
+        return len(protocols) == 4 and protocols[3] == 'admin'
 
     def _getDataSource(self, mtd):
         if self._datasource is None:

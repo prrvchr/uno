@@ -56,17 +56,17 @@ class User(UserBase):
             logger.logprb(INFO, self._cls, mtd, 1503, name)
             request = provider.getRequest(url, name)
             if request is None:
-                raise getSqlException(ctx, source, 1002, 1506, self._cls, mtd, name, g_extension)
+                raise getSqlException(ctx, source, 1003, 1506, self._cls, mtd, name, g_extension)
         else:
             new = True
             logger.logprb(INFO, self._cls, mtd, 1504, name)
             if getConnectionMode(ctx, server) != ONLINE:
-                raise getSqlException(ctx, source, 1004, 1507, self._cls, mtd, server)
+                raise getSqlException(ctx, source, 1005, 1507, self._cls, mtd, server)
             request = provider.getRequest(url, name)
             if request is None:
-                raise getSqlException(ctx, source, 1002, 1506, self._cls, mtd, name, g_extension)
+                raise getSqlException(ctx, source, 1003, 1506, self._cls, mtd, name, g_extension)
             metadata, arguments = provider.insertUser(database, request, scheme, server, name, token)
             if metadata is None:
-                raise getSqlException(ctx, source, 1005, 1508, self._cls, mtd, name)
+                raise getSqlException(ctx, source, 1006, 1508, self._cls, mtd, name)
             database.createUser(getUserSchema(metadata), getUserId(metadata), name, '')
         super().__init__(ctx, request, metadata, arguments, token, new)

@@ -27,53 +27,79 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from .loghandler import getRollerHandlerUrl
+from com.sun.star.logging.LogLevel import INFO
 
-from ..unotool import createService
-from ..unotool import getConfiguration
-from ..unotool import getFileSequence
+from .logmodel import LogModel
+
+from .logview import LogWindow
+
+from .loghandler import CloseListener
+
+from .loghandler import WindowHandler
+
+from ..listener import LoggerListener
+
+from ..loghandler import ViewHandler
+
+from ...unotool import notifyDispatch
 
 
-# XXX: LogConfig allows access to the Logger configuration
-# XXX: it is used by ./dialog/LogModel and ./LogController
-class LogConfig():
-    def __init__(self, ctx):
+class LogManager():
+    def __init__(self, ctx, source, logger, parent=None, name=None, dispatch=None):
         self._ctx = ctx
-        self._setting = '/org.openoffice.Office.Logging/Settings'
-        self.loadSetting()
+        self._source = source
+        self._disposed = False
+        self._dispatch = dispatch
+        self._model = LogModel(ctx, logger, name)
+        self._listener = CloseListener(self)
+        self._view = LogWindow(ctx, parent, WindowHandler(self), self._listener, name, *self._model.getViewData())
+        self._mlistener = LoggerListener(self.refresh)
+        logger.addModifyListener(self._mlistener)
+        self._view.initLogger(self._model.getLoggerContent())
+        self._handler = ViewHandler(ctx, self.publish)
+        logger.addLogHandler(self._handler)
 
-    def loadSetting(self):
-        self._config = getConfiguration(self._ctx, self._setting, True)
+    def publish(self, text):
+        if self._disposed:
+            return
+        self._view.updateLogger(text)
 
-    def getLoggerUrl(self, name):
-        url = '$(userurl)/$(loggername).log'
-        settings = self.getSetting(name).getByName('HandlerSettings')
-        if settings.hasByName('FileURL'):
-            url = settings.getByName('FileURL')
-        path = createService(self._ctx, 'com.sun.star.util.PathSubstitution')
-        url = url.replace('$(loggername)', name)
-        return path.substituteVariables(url, True)
+    def refresh(self):
+        if self._disposed:
+            return
+        url = self._model.refreshUrl()
+        self._view.setUrl(url)
+        self._view.initLogger(self._model.getLoggerContent())
 
-    def getLoggerContent(self, name, roller=False):
-        _, text, length = self.getLoggerData(name, roller)
-        return text, length
+# XCloseListener
+    def queryClosing(self, _source, _ownership):
+        self._disposed = True
+        self._dispose()
 
-    def getLoggerData(self, name, roller=False):
-        url = self._getLoggerUrl(name, roller)
-        length, sequence = getFileSequence(self._ctx, url)
-        text = sequence.value.decode('utf-8')
-        return url, text, length
+    def notifyClosing(self, source):
+        source.removeCloseListener(self._listener)
+        self._view.dispose()
 
-    def saveSetting(self):
-        if self._config.hasPendingChanges():
-            self._config.commitChanges()
-            return True
-        return False
+    def logInfos(self):
+        self._model.logInfos(INFO, 'LogManager', 'logInfos')
 
-    def getSetting(self, name):
-        if not self._config.hasByName(name):
-            self._config.insertByName(name, self._config.createInstance())
-        return self._config.getByName(name)
+    def clearLog(self):
+        self._model.clearLogger()
+        self._view.initLogger('')
 
-    def _getLoggerUrl(self, name, roller=False):
-        return getRollerHandlerUrl(self._ctx, name) if roller else self.getLoggerUrl(name)
+    def closeLog(self):
+        self._disposed = True
+        self._close()
+
+    def _close(self):
+        if self._view.isModal():
+            self._dispose()
+        self._view.close(True)
+
+    def _dispose(self):
+        self._view.enableButtons(False)
+        self._logger.removeLogHandler(self._handler)
+        self._logger.removeModifyListener(self._mlistener)
+        self._model.savePosSize(self._view.getWindowPosSize())
+        if self._dispatch:
+            notifyDispatch(self._source, self._dispatch)

@@ -31,8 +31,6 @@ import unohelper
 
 from com.sun.star.awt import XContainerWindowEventHandler
 
-from com.sun.star.awt import XDialogEventHandler
-
 import traceback
 
 
@@ -49,7 +47,7 @@ class WindowHandler(unohelper.Base,
                 self._manager.setLogger(event.Source.getSelectedItem())
                 handled = True
             elif method == 'EnableLogger':
-                self._manager.enableLogger(bool(event.Source.State))
+                self._manager.enableLogger(event.Source.State)
                 handled = True
             elif method == 'ConsoleHandler':
                 self._manager.toggleHandler(1)
@@ -74,23 +72,3 @@ class WindowHandler(unohelper.Base,
                 'FileHandler',
                 'ViewLog',
                 'SetLevel')
-
-
-class DialogHandler(unohelper.Base,
-                    XDialogEventHandler):
-    def __init__(self, manager):
-        self._manager = manager
-
-    # XDialogEventHandler
-    def callHandlerMethod(self, _dialog, _event, method):
-        try:
-            handled = False
-            if method == 'LogInfo':
-                self._manager.logInfos()
-                handled = True
-            return handled
-        except Exception:
-            print("DialogHandler.callHandlerMethod() ERROR: %s" % traceback.format_exc())
-
-    def getSupportedMethodNames(self):
-        return ('LogInfo', )

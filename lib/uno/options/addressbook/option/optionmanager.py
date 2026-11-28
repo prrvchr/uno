@@ -40,10 +40,8 @@ from ..logger.logmanager import LogManager
 from ...unotool import createService
 from ...unotool import getDesktop
 
-from ...configuration import g_defaultlog
 from ...configuration import g_implementation
 from ...configuration import g_protocol
-from ...configuration import g_synclog
 
 
 class OptionManager():
@@ -51,8 +49,7 @@ class OptionManager():
         self._ctx = ctx
         self._model = OptionModel(ctx, config)
         self._view = OptionView(ctx, window, OptionHandler(self), self._model.getViewData())
-        self._logmanager = LogManager(ctx, self._view.getFrame(), 'requirements.txt', g_defaultlog, g_synclog)
-        self._logmanager.initView()
+        self._logmanager = LogManager(ctx, self._view.getFrame())
         self._logger = logger
         self._logger.logprb(INFO, 'OptionManager', '__init__()', 301)
         self._model.loadDriver()
@@ -64,8 +61,8 @@ class OptionManager():
         return self._model.getDataSourceUrl()
 
     def init(self, state):
+        self._logmanager.init()
         self._view.initView(*self._model.getInitData(state))
-        self._logmanager.loadSetting()
         self._logger.logprb(INFO, 'OptionManager', 'init()', 311)
         self._checkDriver()
 

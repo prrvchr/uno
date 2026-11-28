@@ -27,103 +27,86 @@
 ╚════════════════════════════════════════════════════════════════════════════════════╝
 """
 
-from com.sun.star.logging.LogLevel import INFO
-
 from .logmodel import LogModel
 
 from .logview import LogWindow
-from .logview import LogDialog
 
 from .loghandler import WindowHandler
-from .loghandler import DialogHandler
 
 from ...logger.listener import LoggerListener
 
-from ...logger.helper import getLoggerName
+from ...runner.listener import DispatchListener
+
+from ...logger.helper import showLogger
+
+from contextlib import contextmanager
 
 
 class LogManager():
-    def __init__(self, ctx, window, requirements, *loggers):
+    def __init__(self, ctx, window):
         self._ctx = ctx
-        self._model = LogModel(ctx, loggers)
+        self._model = LogModel(ctx, LoggerListener(self.updateLoggers))
         self._view = LogWindow(ctx, window, WindowHandler(self))
-        self._requirements = requirements
-        self._dialog = None
-        self._model.addPoolListener(LoggerListener(self.updateLoggers))
         self._update = True
+
+    @contextmanager
+    def _noUpdate(self):
+        self._update = False
+        try:
+            yield
+        finally:
+            self._update = True
 
 # LogManager getter methods
     def getLayout(self):
         return self._view.getLayout()
 
 # LogManager setter methods
-    def initView(self):
-        # FIXME: If we want to load data using handlers,
-        # FIXME: it is necessary to devalidate all resulting updates
-        self._update = False
-        self._view.initView(self._model.getLoggerNames())
-        self._update = True
-
     def dispose(self):
         self._model.dispose()
         self._view.dispose()
 
-    # LogManager setter methods called by OptionsManager
+    # LogManager setter methods called by OptionManager
+    def init(self):
+        with self._noUpdate():
+            self._view.initView(self._model.initLoggers())
+            self._view.setLogSetting(*self._model.getLoggerSetting(self._view.getLogger()))
+
     def saveSetting(self):
         return self._model.saveSetting()
 
-    # LogManager setter methods called by OptionsHandler
-    def loadSetting(self):
-        self._update = False
-        self._view.setLogSetting(*self._model.loadSetting())
-        self._update = True
-
     # LogManager setter methods called by LoggerListener
     def updateLoggers(self):
-        logger = self._view.getLogger()
+        name = self._view.getLogger()
         loggers = self._model.getLoggerNames()
         self._view.updateLoggers(loggers)
-        if logger in loggers:
-            self._update = False
-            self._view.setLogger(logger)
-            self._update = True
+        if name in loggers:
+            with self._noUpdate():
+                self._view.setLogger(name)
 
     # LogManager setter methods called by WindowHandler
     def setLogger(self, name):
-        logger = getLoggerName(name)
-        self._view.setLogSetting(*self._model.getLoggerSetting(logger))
+        with self._noUpdate():
+            self._view.setLogSetting(*self._model.getLoggerSetting(name))
 
     def enableLogger(self, enabled):
         if self._update:
-            self._model.enableLogger(enabled, self._view.getLogLevel())
+            self._model.enableLogger(self._view.getLogger(), self._view.getLogLevel(), enabled)
         self._view.enableLogger(enabled)
 
     def toggleHandler(self, index):
         if self._update:
-            self._model.toggleHandler(index)
+            self._model.toggleHandler(self._view.getLogger(), index)
         self._view.enableViewer(index == 2)
 
     def setLevel(self, level):
         if self._update:
-            self._model.setLevel(level)
+            self._model.setLevel(self._view.getLogger(), level)
 
     def viewLog(self):
-        handler = DialogHandler(self)
-        parent = self._view.getParent()
-        data = self._model.getLoggerData()
-        self._dialog = LogDialog(self._ctx, handler, parent, *data)
-        listener = LoggerListener(self.updateLogger)
-        self._model.addLoggerListener(listener)
-        self._dialog.execute()
-        self._model.removeLoggerListener(listener)
-        self._dialog.dispose()
-        self._dialog = None
+        name = self._view.getLogger()
+        logger = self._model.getLogger(name)
+        showLogger(self._ctx, Dispatch=DispatchListener(self), Name=name, Logger=logger)
 
-    # LogManager setter methods called by DialogHandler
-    def logInfos(self):
-        self._model.logInfos(INFO, 'LogManager', 'logInfos', self._requirements)
-
-    # LogManager setter methods called by LoggerListener
-    def updateLogger(self):
-        text, length = self._model.getLogContent()
-        self._dialog.updateLogger(text, length)
+    def dispatchFinished(self, _notification):
+        print("LogManager.dispatchFinished() 1")

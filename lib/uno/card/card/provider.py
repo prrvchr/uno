@@ -107,7 +107,7 @@ class Provider():
             self.initUserGroups(database, user, book)
             count += 1
         if not count:
-            raise getSqlException(self._ctx, self._source, 1006, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
+            raise getSqlException(self._ctx, self._source, 1007, 1611, self._cls, 'initUserBooks', user.Name, user.Server)
         if modified and self.supportAddressBook():
             database.initAddressbooks(user)
 
@@ -143,7 +143,7 @@ class Provider():
         status = response.StatusCode
         msg = response.Text
         response.close()
-        raise getSqlException(self._ctx, self._source, 1006, 1601, self._cls, mtd,
+        raise getSqlException(self._ctx, self._source, 1007, 1601, self._cls, mtd,
                               name, status, user, url, msg)
 
     def getLoggerArgs(self, response, mtd, parameter, user):

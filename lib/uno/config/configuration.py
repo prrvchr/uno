@@ -34,12 +34,17 @@ g_sep = '/'
 g_offset = 11
 g_dialog = 'dialogs'
 g_resource = 'resource'
+g_folderlog = 'log'
+g_requirements = 'requirements.txt'
 
 # Setup frame and Job name
-g_setup = '%s.Setup' % g_extension
+g_setup = f'{g_extension}.Setup'
+
+# Logger frame and Job name
+g_logger = f'{g_extension}.Logger'
 
 # Replicator frame and Job name
-g_replicator = '%s.Replicator' % g_extension
+g_replicator = f'{g_extension}.Replicator'
 
 
 class State:

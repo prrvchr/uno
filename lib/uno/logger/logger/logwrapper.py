@@ -41,10 +41,6 @@ from ..configuration import g_extension
 from ..configuration import g_identifier
 
 
-def getLogName(name):
-    return '%s.%s' % (g_identifier, name)
-
-
 # XXX: This LogWrapper allows using variable number of argument in Python
 # XXX: while the UNO Logging API does not allow it
 class LogWrapper():
@@ -132,5 +128,5 @@ class LogWrapper():
         if logger:
             log = LoggerPool(ctx).getLocalizedLoggerFromLogger(logger, url, basename)
         else:
-            log = LoggerPool(ctx).getLocalizedLogger(getLogName(name), url, basename)
+            log = LoggerPool(ctx).getLocalizedLogger(name, url, basename)
         return url, log

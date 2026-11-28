@@ -39,11 +39,14 @@ import validators
 
 
 class Driver(DriverBase):
-    def _getConnectionParams(self, url, _infos, mtd):
+    def _getProtocols(self, url, mtd):
         protocols = url.strip().split(':')
         if len(protocols) != 4 or not all(protocols):
-            raise getLogException(self._logger, self, 1000, 1112, self._cls, mtd, url)
+            raise getLogException(self._logger, self, 1000, 1113, self._cls, mtd, url)
+        return protocols
+
+    def _getConnectionParams(self, protocols, _url, _infos, mtd):
         username = protocols[3]
         if not validators.email(username):
-            raise getLogException(self._logger, self, 1001, 1114, self._cls, mtd, username)
+            raise getLogException(self._logger, self, 1000, 1117, self._cls, mtd, username)
         return g_scope, g_scheme, g_host, username

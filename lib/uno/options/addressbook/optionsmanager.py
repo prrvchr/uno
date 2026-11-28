@@ -132,6 +132,8 @@ class OptionsManager():
     def _loadView(self, callback):
         if self._disposed:
             return
+        if self._checker:
+            self._checker.cancel()
         mode = self._setup.getSetupMode()
         database = self._manager.getDataSourceUrl()
         self._checker = SetupCheck(self._ctx, callback, database=database, java=self._java, agent=self._agent, python=True, extensions=getExtensions(), mode=mode)
